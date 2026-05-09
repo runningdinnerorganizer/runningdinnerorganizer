@@ -203,6 +203,36 @@ export default function EventDetailPage() {
             <span className="text-xl font-bold text-amber-900">Running Dinner</span>
           </Link>
 
+          <div className="flex items-center gap-2">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="rounded-xl border-amber-200 gap-2">
+                  <Users className="h-4 w-4" />
+                  <span>Manage</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuItem asChild>
+                  <Link href={`/events/${eventId}/participants`} className="flex items-center gap-2">
+                    <Users className="h-4 w-4" />
+                    Participants
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href={`/events/${eventId}/teams`} className="flex items-center gap-2">
+                    <ChefHat className="h-4 w-4" />
+                    Teams
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href={`/events/${eventId}/emails`} className="flex items-center gap-2">
+                    <Mail className="h-4 w-4" />
+                    Emails
+                  </Link>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="icon" className="rounded-xl border-amber-200" disabled={isUpdatingStatus}>
@@ -244,6 +274,7 @@ export default function EventDetailPage() {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+          </div>
         </div>
       </header>
 
