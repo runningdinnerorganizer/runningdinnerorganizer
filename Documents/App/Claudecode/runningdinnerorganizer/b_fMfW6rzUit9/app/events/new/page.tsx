@@ -65,6 +65,9 @@ export default function NewEventPage() {
     schedule: defaultSchedule,
     registrationDeadline: null,
     maxParticipants: 24,
+    contactName: '',
+    contactEmail: '',
+    contactPhone: '',
   })
 
   const updateFormData = (updates: Partial<EventFormData>) => {
@@ -95,8 +98,9 @@ export default function NewEventPage() {
         appetizerTime: formData.schedule.appetizer.start,
         mainTime: formData.schedule.main.start,
         dessertTime: formData.schedule.dessert.start,
-        contactName: null,
-        contactEmail: null,
+        contactName: formData.contactName || null,
+        contactEmail: formData.contactEmail || null,
+        contactPhone: formData.contactPhone || null,
       }
 
       const res = await fetch('/api/events', {

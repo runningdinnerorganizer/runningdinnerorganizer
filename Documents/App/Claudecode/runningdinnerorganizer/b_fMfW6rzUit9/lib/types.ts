@@ -127,6 +127,9 @@ export interface EventFormData {
   // Step 4: Options
   registrationDeadline: Date | null
   maxParticipants: number
+  contactName: string
+  contactEmail: string
+  contactPhone: string
 }
 
 export interface ParticipantFormData {

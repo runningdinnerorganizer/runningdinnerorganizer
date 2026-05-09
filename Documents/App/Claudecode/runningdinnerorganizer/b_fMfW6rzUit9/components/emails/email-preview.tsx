@@ -17,6 +17,7 @@ export interface RealEvent {
   dessertTime: string
   contactName: string
   contactEmail: string
+  contactPhone: string
   status: string
 }
 

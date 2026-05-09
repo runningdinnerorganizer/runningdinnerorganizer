@@ -90,6 +90,7 @@ export async function PUT(request: NextRequest, { params }: RouteContext) {
     if (body.dessertTime !== undefined) updates.dessert_time = body.dessertTime
     if (body.contactName !== undefined) updates.contact_name = body.contactName
     if (body.contactEmail !== undefined) updates.contact_email = body.contactEmail
+    if (body.contactPhone !== undefined) updates.contact_phone = body.contactPhone
     if (body.registrationActive !== undefined) updates.registration_active = body.registrationActive
     if (body.status !== undefined) updates.status = body.status
 
@@ -166,6 +167,7 @@ function mapEvent(row: Record<string, unknown>) {
     dessertTime: row.dessert_time,
     contactName: row.contact_name,
     contactEmail: row.contact_email,
+    contactPhone: row.contact_phone,
     registrationActive: row.registration_active,
     status: row.status,
     inviteToken: row.invite_token,

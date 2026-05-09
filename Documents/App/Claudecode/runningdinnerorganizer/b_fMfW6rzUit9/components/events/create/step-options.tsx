@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import type { EventFormData } from '@/lib/types'
 import { format, subDays } from 'date-fns'
-import { Calendar, Info } from 'lucide-react'
+import { Calendar, Info, User, Mail, Phone } from 'lucide-react'
 
 interface StepOptionsProps {
   formData: EventFormData
@@ -47,6 +47,33 @@ export function StepOptions({ formData, updateFormData }: StepOptionsProps) {
         )}
       </div>
       
+      {/* Contact Info */}
+      <div className="space-y-4">
+        <h3 className="font-medium">Contact Person</h3>
+        <p className="text-sm text-muted-foreground">This will appear in emails so participants can reach you.</p>
+        <div className="space-y-2">
+          <Label htmlFor="contactName">Name</Label>
+          <div className="relative">
+            <User className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input id="contactName" className="pl-10" placeholder="e.g. Max Mustermann" value={formData.contactName} onChange={(e) => updateFormData({ contactName: e.target.value })} />
+          </div>
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="contactEmail">Email</Label>
+          <div className="relative">
+            <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input id="contactEmail" type="email" className="pl-10" placeholder="e.g. max@example.com" value={formData.contactEmail} onChange={(e) => updateFormData({ contactEmail: e.target.value })} />
+          </div>
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="contactPhone">Phone</Label>
+          <div className="relative">
+            <Phone className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input id="contactPhone" type="tel" className="pl-10" placeholder="e.g. +49 151 12345678" value={formData.contactPhone} onChange={(e) => updateFormData({ contactPhone: e.target.value })} />
+          </div>
+        </div>
+      </div>
+
       <div className="rounded-lg border border-border bg-muted/30 p-4">
         <div className="flex items-start gap-3">
           <Info className="mt-0.5 h-5 w-5 flex-shrink-0 text-primary" />

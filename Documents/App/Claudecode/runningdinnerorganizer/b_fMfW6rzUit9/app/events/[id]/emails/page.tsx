@@ -31,34 +31,36 @@ import { format } from 'date-fns'
 // ---------------------------------------------------------------------------
 // Hardcoded email templates (no DB table)
 // ---------------------------------------------------------------------------
+const CONTACT_FOOTER = `\n\n---\nQuestions? Reach out to {{contactName}}:\n✉️ {{contactEmail}}\n📞 {{contactPhone}}`
+
 const EMAIL_TEMPLATES: EmailTemplate[] = [
   {
     id: 'welcome',
     name: 'Welcome Email',
     type: 'welcome',
-    subject: 'Welcome to {{eventTitle}}!',
-    body: `Hi {{firstName}},\n\nThank you for registering for the Running Dinner event "{{eventTitle}}" on {{date}} in {{city}}!\n\nThe evening starts with appetizers at {{appetizerTime}}, followed by the main course at {{mainTime}}, and dessert at {{dessertTime}}.\n\nRegistration deadline: {{registrationDeadline}}\n\nYou will receive your team and route information soon.\n\nBest regards,\n{{contactName}}`,
+    subject: '🍽️ You\'re in! Welcome to {{eventTitle}}!',
+    body: `Hey {{firstName}}! 🎉\n\nThank you for registering for the Running Dinner event "{{eventTitle}}" on {{date}} in {{city}}!\n\nGet ready for an unforgettable evening full of delicious food, great company, and a little adventure. Here's a sneak peek at the schedule:\n\n🥗 Appetizer: {{appetizerTime}}\n🍝 Main Course: {{mainTime}}\n🍰 Dessert: {{dessertTime}}\n\nRegistration deadline: {{registrationDeadline}}\n\nYour personal team assignment and dinner route will follow soon.\n\nCurious about how a Running Dinner works? Scroll down! 👇\n\nWarm regards,\n{{contactName}}${CONTACT_FOOTER}\n\n\n---------------------------------------------------\n🍽️ HOW DOES A RUNNING DINNER WORK?\n---------------------------------------------------\n\nA Running Dinner is a social dining experience where participants share a multi-course meal — but each course takes place at a different home!\n\nHere's how your evening will unfold:\n\n1️⃣ APPETIZER\nYou start the evening at your first hosts' home together with one other couple. Enjoy the starter, get to know your fellow guests, and warm up for the night ahead.\n\n2️⃣ MAIN COURSE\nAfter appetizers, everyone moves on — you'll head to a completely different home with a brand new group of people. Fresh conversations, new faces, and a delicious main dish await.\n\n3️⃣ DESSERT\nFor the grand finale, you move once more to yet another home for dessert. By this point you'll have met a whole new circle of people from your community!\n\n🏠 YOUR ROLE AS HOST\nEvery team hosts exactly one course at their own home — so you'll be a guest for two courses and a host for one. As a host, you prepare and serve one dish for 6 people (including yourself). Simple and homemade is absolutely perfect!\n\n🤝 THE MAGIC OF IT\nBy the end of the evening, you will have shared a meal with up to 10 different people — all from your neighbourhood or community. A wonderful way to connect, discover new homes, and make lasting friendships.\n\nYou'll receive your exact route closer to the event. Until then — start thinking about what you'd like to cook! 🍳`,
   },
   {
     id: 'team_info',
     name: 'Team Assignment',
     type: 'team_info',
-    subject: 'Your Team for {{eventTitle}}',
-    body: `Hi {{firstName}},\n\nYour teams have been assigned for {{eventTitle}}!\n\nYour partner: {{partnerName}}\nYou are hosting: {{hostingCourse}} at {{hostingTime}}\nHosting address: {{hostingAddress}}\n\nDietary notes from your guests:\n{{dietaryNotes}}\n\nBest regards,\n{{contactName}}`,
+    subject: '🎉 Your team is set — {{eventTitle}} is getting real!',
+    body: `Hey {{firstName}}! 🙌\n\nThe moment you've been waiting for — your team assignment for "{{eventTitle}}" is here!\n\nYour dinner partner: {{partnerName}} 🤝\n✉️ {{partnerEmail}}\n📞 {{partnerPhone}}\n\nYou are hosting the {{hostingCourse}} course!\n🕐 Time: {{hostingTime}}\n📍 At your place: {{hostingAddress}}\n\n📋 Dietary notes from your incoming guests:\n{{dietaryNotes}}\n\nPlease keep these in mind when preparing your dish — it means a lot to your guests!\n\nYour full dinner route will follow in a separate email very soon.\n\nWarm regards,\n{{contactName}}${CONTACT_FOOTER}`,
   },
   {
     id: 'route',
     name: 'Dinner Route',
     type: 'route',
-    subject: 'Your Dinner Route for {{eventTitle}}',
-    body: `Hi {{firstName}},\n\nHere is your dinner route for {{eventTitle}} on {{date}}:\n\nAppetizer at {{appetizerTime}}:\n{{appetizerHostNames}} — {{appetizerAddress}}\nContact: {{appetizerHostPhone}}\n\nMain course at {{mainTime}}:\n{{mainHostNames}} — {{mainAddress}}\nContact: {{mainHostPhone}}\n\nDessert at {{dessertTime}}:\n{{dessertHostNames}} — {{dessertAddress}}\nContact: {{dessertHostPhone}}\n\nBest regards,\n{{contactName}}`,
+    subject: '🗺️ Your dinner route for {{eventTitle}}!',
+    body: `Hey {{firstName}}! 🚀\n\nYour personal dinner route for "{{eventTitle}}" on {{date}} is ready!\n\nHere's where your evening will take you:\n\n🥗 APPETIZER — {{appetizerTime}}\nHosts: {{appetizerHostNames}}\n📍 {{appetizerAddress}}\n📞 {{appetizerHostPhone}} / {{appetizerHostPhone2}}\n\n🍝 MAIN COURSE — {{mainTime}}\nHosts: {{mainHostNames}}\n📍 {{mainAddress}}\n📞 {{mainHostPhone}} / {{mainHostPhone2}}\n\n🍰 DESSERT — {{dessertTime}}\nHosts: {{dessertHostNames}}\n📍 {{dessertAddress}}\n📞 {{dessertHostPhone}} / {{dessertHostPhone2}}\n\n💡 A few tips:\n→ Arrive on time — your hosts have prepared everything for you!\n→ If you're running late, give your hosts a quick call.\n→ Most importantly: be open, be curious, and enjoy every bite!\n\nHave a wonderful evening! 🥂\n\nWarm regards,\n{{contactName}}${CONTACT_FOOTER}`,
   },
   {
     id: 'reminder',
     name: 'Event Reminder',
     type: 'reminder',
-    subject: 'Reminder: {{eventTitle}} is Tomorrow!',
-    body: `Hi {{firstName}},\n\nJust a reminder that {{eventTitle}} is tomorrow!\n\nYour schedule:\n- Appetizer at {{appetizerTime}}: {{appetizerHostNames}} — {{appetizerAddress}} ({{appetizerHostPhone}})\n- Main course at {{mainTime}}: {{mainHostNames}} — {{mainAddress}} ({{mainHostPhone}})\n- Dessert at {{dessertTime}}: {{dessertHostNames}} — {{dessertAddress}} ({{dessertHostPhone}})\n\nSee you there!\n\n{{contactName}}`,
+    subject: '⏰ Tomorrow is the big day — {{eventTitle}} is almost here!',
+    body: `Hey {{firstName}}! 🌟\n\nJust one more sleep — {{eventTitle}} is TOMORROW!\n\nHere's your schedule one more time:\n\n🥗 Appetizer at {{appetizerTime}}\n{{appetizerHostNames}} — {{appetizerAddress}}\n📞 {{appetizerHostPhone}} / {{appetizerHostPhone2}}\n\n🍝 Main Course at {{mainTime}}\n{{mainHostNames}} — {{mainAddress}}\n📞 {{mainHostPhone}} / {{mainHostPhone2}}\n\n🍰 Dessert at {{dessertTime}}\n{{dessertHostNames}} — {{dessertAddress}}\n📞 {{dessertHostPhone}} / {{dessertHostPhone2}}\n\nSee you at the table! 🍽️✨\n\nWarm regards,\n{{contactName}}${CONTACT_FOOTER}`,
   },
 ]
 
@@ -247,7 +249,11 @@ export default function EmailsPage() {
       .replace(/\{\{dessertTime\}\}/g, (evt.dessertTime || '21:00').slice(0, 5))
       .replace(/\{\{registrationDeadline\}\}/g, evt.registrationDeadline ? new Date(evt.registrationDeadline).toLocaleDateString('en-GB') : '—')
       .replace(/\{\{contactName\}\}/g, evt.contactName || '—')
+      .replace(/\{\{contactEmail\}\}/g, evt.contactEmail || '—')
+      .replace(/\{\{contactPhone\}\}/g, evt.contactPhone || '—')
       .replace(/\{\{partnerName\}\}/g, 'Anna Müller')
+      .replace(/\{\{partnerEmail\}\}/g, 'anna.mueller@example.com')
+      .replace(/\{\{partnerPhone\}\}/g, '+49 151 99887766')
       .replace(/\{\{hostingCourse\}\}/g, 'Appetizer')
       .replace(/\{\{hostingTime\}\}/g, (evt.appetizerTime || '19:00').slice(0, 5))
       .replace(/\{\{hostingAddress\}\}/g, 'Musterstraße 1, 12345 Berlin')
@@ -255,12 +261,15 @@ export default function EmailsPage() {
       .replace(/\{\{appetizerHostNames\}\}/g, 'Lisa & Tom Müller')
       .replace(/\{\{appetizerAddress\}\}/g, 'Musterstraße 1, 12345 Berlin')
       .replace(/\{\{appetizerHostPhone\}\}/g, '+49 151 12345678')
+      .replace(/\{\{appetizerHostPhone2\}\}/g, '+49 151 87654321')
       .replace(/\{\{mainHostNames\}\}/g, 'Julia & Peter Schmidt')
       .replace(/\{\{mainAddress\}\}/g, 'Beispielweg 5, 12345 Berlin')
       .replace(/\{\{mainHostPhone\}\}/g, '+49 152 87654321')
+      .replace(/\{\{mainHostPhone2\}\}/g, '+49 152 11223344')
       .replace(/\{\{dessertHostNames\}\}/g, 'Sara & Klaus Weber')
       .replace(/\{\{dessertAddress\}\}/g, 'Testgasse 9, 12345 Berlin')
       .replace(/\{\{dessertHostPhone\}\}/g, '+49 160 11223344')
+      .replace(/\{\{dessertHostPhone2\}\}/g, '+49 160 55667788')
   }
 
   async function handleSendToSelf(template: EmailTemplate) {

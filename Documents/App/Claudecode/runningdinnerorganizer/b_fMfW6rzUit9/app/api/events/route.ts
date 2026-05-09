@@ -61,6 +61,7 @@ export async function POST(request: NextRequest) {
       dessertTime,
       contactName,
       contactEmail,
+      contactPhone,
     } = body
 
     const { data: event, error } = await supabase
@@ -78,6 +79,7 @@ export async function POST(request: NextRequest) {
         dessert_time: dessertTime,
         contact_name: contactName,
         contact_email: contactEmail,
+        contact_phone: contactPhone,
         status: 'registration_open',
         registration_active: true,
       })
@@ -110,6 +112,7 @@ function mapEvent(row: Record<string, unknown>) {
     dessertTime: row.dessert_time,
     contactName: row.contact_name,
     contactEmail: row.contact_email,
+    contactPhone: row.contact_phone,
     registrationActive: row.registration_active,
     status: row.status,
     inviteToken: row.invite_token, // included so frontend can build the registration URL
