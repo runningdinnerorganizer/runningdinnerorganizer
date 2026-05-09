@@ -3,7 +3,7 @@
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import type { EventFormData } from '@/lib/types'
-import { MapPin, Info } from 'lucide-react'
+import { MapPin } from 'lucide-react'
 
 interface StepLocationProps {
   formData: EventFormData
@@ -43,27 +43,6 @@ export function StepLocation({ formData, updateFormData }: StepLocationProps) {
         </p>
       </div>
       
-      {/* Map Preview Placeholder */}
-      <div className="rounded-lg border border-dashed border-border bg-muted/30 p-8">
-        <div className="flex flex-col items-center justify-center text-center">
-          <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-            <MapPin className="h-6 w-6 text-primary" />
-          </div>
-          <h3 className="mb-2 font-medium">Google Maps Preview</h3>
-          <p className="mb-4 text-sm text-muted-foreground">
-            Add a Google Maps API key to enable address autocomplete and map preview.
-          </p>
-          <div className="flex items-start gap-2 rounded-lg bg-muted p-3 text-left text-xs">
-            <Info className="mt-0.5 h-4 w-4 flex-shrink-0 text-muted-foreground" />
-            <div>
-              <p className="font-medium">Demo Mode</p>
-              <p className="text-muted-foreground">
-                In the full version, you would see an interactive map here with address autocomplete powered by Google Maps.
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
   )
 }

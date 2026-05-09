@@ -38,8 +38,8 @@ const steps = [
 
 const defaultSchedule: EventSchedule = {
   appetizer: { start: '18:00', end: '19:15' },
-  main: { start: '19:30', end: '21:00' },
-  dessert: { start: '21:15', end: '22:30' },
+  main: { start: '20:00', end: '21:00' },
+  dessert: { start: '21:00', end: '22:30' },
 }
 
 interface CreatedEvent {
