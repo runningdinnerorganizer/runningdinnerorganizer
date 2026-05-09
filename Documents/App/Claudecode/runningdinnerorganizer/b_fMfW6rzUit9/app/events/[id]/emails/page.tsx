@@ -37,28 +37,28 @@ const EMAIL_TEMPLATES: EmailTemplate[] = [
     name: 'Welcome Email',
     type: 'welcome',
     subject: 'Welcome to {{eventTitle}}!',
-    body: `Hi {{firstName}},\n\nThank you for registering for {{eventTitle}} on {{date}} in {{city}}!\n\nThe evening starts with appetizers at {{appetizerTime}}, followed by the main course at {{mainTime}}, and dessert at {{dessertTime}}.\n\nRegistration deadline: {{registrationDeadline}}\n\nYou will receive your team and route information soon.\n\nBest regards,\n{{contactName}}`,
+    body: `Hi {{firstName}},\n\nThank you for registering for the Running Dinner event "{{eventTitle}}" on {{date}} in {{city}}!\n\nThe evening starts with appetizers at {{appetizerTime}}, followed by the main course at {{mainTime}}, and dessert at {{dessertTime}}.\n\nRegistration deadline: {{registrationDeadline}}\n\nYou will receive your team and route information soon.\n\nBest regards,\n{{contactName}}`,
   },
   {
     id: 'team_info',
     name: 'Team Assignment',
     type: 'team_info',
     subject: 'Your Team for {{eventTitle}}',
-    body: `Hi {{firstName}},\n\nYour teams have been assigned for {{eventTitle}}!\n\nYour partner: {{partnerName}}\nYou are hosting: {{hostingCourse}} at {{hostingTime}}\n\nDietary notes from your guests:\n{{dietaryNotes}}\n\nBest regards,\n{{contactName}}`,
+    body: `Hi {{firstName}},\n\nYour teams have been assigned for {{eventTitle}}!\n\nYour partner: {{partnerName}}\nYou are hosting: {{hostingCourse}} at {{hostingTime}}\nHosting address: {{hostingAddress}}\n\nDietary notes from your guests:\n{{dietaryNotes}}\n\nBest regards,\n{{contactName}}`,
   },
   {
     id: 'route',
     name: 'Dinner Route',
     type: 'route',
     subject: 'Your Dinner Route for {{eventTitle}}',
-    body: `Hi {{firstName}},\n\nHere is your dinner route for {{eventTitle}} on {{date}}:\n\nAppetizer at {{appetizerTime}}:\n{{appetizerHost}} — {{appetizerAddress}}\n\nMain course at {{mainTime}}:\n{{mainHost}} — {{mainAddress}}\n\nDessert at {{dessertTime}}:\n{{dessertHost}} — {{dessertAddress}}\n\nBest regards,\n{{contactName}}`,
+    body: `Hi {{firstName}},\n\nHere is your dinner route for {{eventTitle}} on {{date}}:\n\nAppetizer at {{appetizerTime}}:\n{{appetizerHostNames}} — {{appetizerAddress}}\nContact: {{appetizerHostPhone}}\n\nMain course at {{mainTime}}:\n{{mainHostNames}} — {{mainAddress}}\nContact: {{mainHostPhone}}\n\nDessert at {{dessertTime}}:\n{{dessertHostNames}} — {{dessertAddress}}\nContact: {{dessertHostPhone}}\n\nBest regards,\n{{contactName}}`,
   },
   {
     id: 'reminder',
     name: 'Event Reminder',
     type: 'reminder',
     subject: 'Reminder: {{eventTitle}} is Tomorrow!',
-    body: `Hi {{firstName}},\n\nJust a reminder that {{eventTitle}} is tomorrow!\n\nYour schedule:\n- Appetizer at {{appetizerTime}}: {{appetizerAddress}}\n- Main course at {{mainTime}}: {{mainAddress}}\n- Dessert at {{dessertTime}}: {{dessertAddress}}\n\nSee you there!\n\n{{contactName}}`,
+    body: `Hi {{firstName}},\n\nJust a reminder that {{eventTitle}} is tomorrow!\n\nYour schedule:\n- Appetizer at {{appetizerTime}}: {{appetizerHostNames}} — {{appetizerAddress}} ({{appetizerHostPhone}})\n- Main course at {{mainTime}}: {{mainHostNames}} — {{mainAddress}} ({{mainHostPhone}})\n- Dessert at {{dessertTime}}: {{dessertHostNames}} — {{dessertAddress}} ({{dessertHostPhone}})\n\nSee you there!\n\n{{contactName}}`,
   },
 ]
 
@@ -242,28 +242,32 @@ export default function EmailsPage() {
       .replace(/\{\{eventTitle\}\}/g, evt.publicTitle || evt.title)
       .replace(/\{\{date\}\}/g, evt.date ? new Date(evt.date).toLocaleDateString('en-GB') : '—')
       .replace(/\{\{city\}\}/g, evt.city || '—')
-      .replace(/\{\{appetizerTime\}\}/g, evt.appetizerTime || '19:00')
-      .replace(/\{\{mainTime\}\}/g, evt.mainTime || '20:00')
-      .replace(/\{\{dessertTime\}\}/g, evt.dessertTime || '21:00')
+      .replace(/\{\{appetizerTime\}\}/g, (evt.appetizerTime || '19:00').slice(0, 5))
+      .replace(/\{\{mainTime\}\}/g, (evt.mainTime || '20:00').slice(0, 5))
+      .replace(/\{\{dessertTime\}\}/g, (evt.dessertTime || '21:00').slice(0, 5))
       .replace(/\{\{registrationDeadline\}\}/g, evt.registrationDeadline ? new Date(evt.registrationDeadline).toLocaleDateString('en-GB') : '—')
       .replace(/\{\{contactName\}\}/g, evt.contactName || '—')
       .replace(/\{\{partnerName\}\}/g, 'Anna Müller')
       .replace(/\{\{hostingCourse\}\}/g, 'Appetizer')
-      .replace(/\{\{hostingTime\}\}/g, evt.appetizerTime || '19:00')
+      .replace(/\{\{hostingTime\}\}/g, (evt.appetizerTime || '19:00').slice(0, 5))
+      .replace(/\{\{hostingAddress\}\}/g, 'Musterstraße 1, 12345 Berlin')
       .replace(/\{\{dietaryNotes\}\}/g, 'Guest 1: Vegetarian\nGuest 2: Gluten-free')
-      .replace(/\{\{appetizerHost\}\}/g, 'Team Müller')
+      .replace(/\{\{appetizerHostNames\}\}/g, 'Lisa & Tom Müller')
       .replace(/\{\{appetizerAddress\}\}/g, 'Musterstraße 1, 12345 Berlin')
-      .replace(/\{\{mainHost\}\}/g, 'Team Schmidt')
+      .replace(/\{\{appetizerHostPhone\}\}/g, '+49 151 12345678')
+      .replace(/\{\{mainHostNames\}\}/g, 'Julia & Peter Schmidt')
       .replace(/\{\{mainAddress\}\}/g, 'Beispielweg 5, 12345 Berlin')
-      .replace(/\{\{dessertHost\}\}/g, 'Team Weber')
+      .replace(/\{\{mainHostPhone\}\}/g, '+49 152 87654321')
+      .replace(/\{\{dessertHostNames\}\}/g, 'Sara & Klaus Weber')
       .replace(/\{\{dessertAddress\}\}/g, 'Testgasse 9, 12345 Berlin')
+      .replace(/\{\{dessertHostPhone\}\}/g, '+49 160 11223344')
   }
 
   async function handleSendToSelf(template: EmailTemplate) {
     setPreviewSendingId(template.id)
     setPreviewLoggedId(null)
     try {
-      await fetch(`/api/events/${eventId}/emails`, {
+      const res = await fetch(`/api/events/${eventId}/emails`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -271,12 +275,13 @@ export default function EmailsPage() {
           subject: renderPreview(template.subject, event),
           body: renderPreview(template.body, event),
           recipientIds: [],
+          sendToSelf: true,
         }),
       })
-      // API returns 400 for empty recipientIds — that's expected;
-      // we still surface the "logged" state to the user.
-      setPreviewLoggedId(template.id)
-      setTimeout(() => setPreviewLoggedId(null), 3000)
+      if (res.ok) {
+        setPreviewLoggedId(template.id)
+        setTimeout(() => setPreviewLoggedId(null), 3000)
+      }
     } finally {
       setPreviewSendingId(null)
     }

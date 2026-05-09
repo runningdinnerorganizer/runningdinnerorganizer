@@ -93,27 +93,37 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     }
 
     const body = await request.json()
-    const { templateId, subject, body: emailBody, recipientIds } = body as {
+    const { templateId, subject, body: emailBody, recipientIds, sendToSelf } = body as {
       templateId: string
       subject: string
       body: string
       recipientIds: string[]
+      sendToSelf?: boolean
     }
 
-    if (!templateId || !subject || !emailBody || !Array.isArray(recipientIds) || recipientIds.length === 0) {
+    if (!templateId || !subject || !emailBody) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
-    // Fetch each participant to get their email address
-    const { data: participants, error: participantError } = await supabase
-      .from('participants')
-      .select('id, first_name, last_name, email')
-      .eq('dinner_id', id)
-      .in('id', recipientIds)
+    let participants: { id: string; first_name: string; last_name: string; email: string }[] = []
 
-    if (participantError) throw participantError
+    if (sendToSelf) {
+      // Send to the organizer's own email
+      participants = [{ id: user.id, first_name: 'Organizer', last_name: '', email: user.email! }]
+    } else {
+      if (!Array.isArray(recipientIds) || recipientIds.length === 0) {
+        return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
+      }
+      const { data, error: participantError } = await supabase
+        .from('participants')
+        .select('id, first_name, last_name, email')
+        .eq('dinner_id', id)
+        .in('id', recipientIds)
+      if (participantError) throw participantError
+      participants = data ?? []
+    }
 
-    if (!participants || participants.length === 0) {
+    if (participants.length === 0) {
       return NextResponse.json({ sent: 0, logs: [] })
     }
 
