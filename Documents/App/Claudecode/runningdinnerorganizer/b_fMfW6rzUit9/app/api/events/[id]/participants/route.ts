@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createServerClient } from '@supabase/ssr'
+import nodemailer from 'nodemailer'
+
+const transporter = nodemailer.createTransport({
+  host: 'smtp-relay.brevo.com',
+  port: 587,
+  auth: { user: process.env.BREVO_SMTP_USER, pass: process.env.BREVO_SMTP_KEY },
+})
 
 type RouteContext = { params: Promise<{ id: string }> }
 
@@ -63,7 +70,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     // Look up the dinner and check it is open for registration
     const { data: dinner, error: dinnerError } = await supabase
       .from('running_dinners')
-      .select('id, registration_active, registration_deadline')
+      .select('id, registration_active, registration_deadline, title, public_title, city, date, appetizer_time, main_time, dessert_time, contact_name, contact_email, contact_phone')
       .eq('id', id)
       .single()
 
@@ -137,6 +144,23 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
       .single()
 
     if (insertError) throw insertError
+
+    // Send welcome email
+    try {
+      const eventTitle = dinner.public_title || dinner.title
+      const eventDate = dinner.date ? new Date(dinner.date).toLocaleDateString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) : '—'
+      const fmt = (t: string) => (t || '').slice(0, 5)
+      const body = `Hey ${firstName}! 🎉\n\nThank you for registering for the Running Dinner event "${eventTitle}" on ${eventDate} in ${dinner.city}!\n\nGet ready for an unforgettable evening full of delicious food and great company. Here's a sneak peek at the schedule:\n\n🥗 Appetizer: ${fmt(dinner.appetizer_time)}\n🍝 Main Course: ${fmt(dinner.main_time)}\n🍰 Dessert: ${fmt(dinner.dessert_time)}\n\nYour personal team assignment and dinner route will follow soon.\n\nCurious about how a Running Dinner works? Scroll to the bottom of this email! 👇\n\nWarm regards,\n${dinner.contact_name || 'The Organizer'}\n\n---\nQuestions? Reach out to ${dinner.contact_name || 'the organizer'}:\n✉️ ${dinner.contact_email || '—'}\n📞 ${dinner.contact_phone || '—'}\n\n\n---------------------------------------------------\n🍽️ HOW DOES A RUNNING DINNER WORK?\n---------------------------------------------------\n\nA Running Dinner is a social dining experience where participants share a multi-course meal — but each course takes place at a different home!\n\n1️⃣ APPETIZER\nYou start the evening at your first hosts' home together with one other couple.\n\n2️⃣ MAIN COURSE\nYou move to a completely different home with a brand new group of people.\n\n3️⃣ DESSERT\nFor the grand finale, you move once more to yet another home for dessert.\n\n🏠 YOUR ROLE AS HOST\nEvery team hosts exactly one course — so you'll be a guest for two courses and a host for one. Simple and homemade is absolutely perfect!\n\n🤝 THE MAGIC\nBy the end of the evening, you will have shared a meal with up to 10 different people from your community. A wonderful way to connect and make lasting friendships. 🌟`
+
+      await transporter.sendMail({
+        from: process.env.EMAIL_FROM ?? 'runningdinnerorganizer@gmail.com',
+        to: email,
+        subject: `🍽️ You're in! Welcome to ${eventTitle}!`,
+        text: body,
+      })
+    } catch {
+      // Don't fail registration if email fails
+    }
 
     return NextResponse.json({ participant: mapParticipant(participant) }, { status: 201 })
   } catch (err) {

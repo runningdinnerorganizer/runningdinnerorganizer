@@ -293,7 +293,7 @@ export default function JoinPage() {
       <main className="container mx-auto px-4 py-8">
         <div className="mx-auto max-w-2xl space-y-6">
 
-          {/* Event Info Banner */}
+          {/* Greeting Banner */}
           <Card className="overflow-hidden rounded-2xl border-2 border-amber-200/50 bg-white/80 shadow-sm">
             <div className="h-1.5 bg-gradient-to-r from-orange-400 via-amber-400 to-yellow-400" />
             <CardContent className="p-6">
@@ -302,12 +302,13 @@ export default function JoinPage() {
                   <UtensilsCrossed className="h-7 w-7 text-white" />
                 </div>
                 <div className="flex-1">
+                  <p className="text-sm font-medium text-amber-600 mb-1">You are registering for</p>
                   <h1 className="text-xl font-bold text-amber-900">{dinner.publicTitle || 'Running Dinner'}</h1>
                   {dinner.publicDescription && <p className="mt-1 text-sm text-amber-700">{dinner.publicDescription}</p>}
                   <div className="mt-3 flex flex-wrap gap-3 text-sm text-amber-700">
                     <div className="flex items-center gap-1.5">
                       <Calendar className="h-4 w-4 text-amber-500" />
-                      {format(new Date(dinner.date), 'EEE, MMM d, yyyy')}
+                      {format(new Date(dinner.date), 'EEEE, MMMM d, yyyy')}
                     </div>
                     <div className="flex items-center gap-1.5">
                       <MapPin className="h-4 w-4 text-amber-500" />
@@ -323,6 +324,7 @@ export default function JoinPage() {
                       Organized by {dinner.contactName}{dinner.contactEmail ? ` · ${dinner.contactEmail}` : ''}
                     </p>
                   )}
+                  <p className="mt-3 text-xs text-amber-500 italic">👇 Want to know what a Running Dinner is? Scroll to the bottom!</p>
                 </div>
               </div>
             </CardContent>
@@ -366,7 +368,10 @@ export default function JoinPage() {
                 <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
                   <div className="flex items-center gap-3">
                     <Checkbox id="hasPartner" checked={form.hasPartner} onCheckedChange={(checked) => update({ hasPartner: !!checked })} />
-                    <Label htmlFor="hasPartner" className="cursor-pointer font-medium text-amber-900">I am registering with a partner</Label>
+                    <div>
+                      <Label htmlFor="hasPartner" className="cursor-pointer font-medium text-amber-900">I am registering with a partner</Label>
+                      <p className="text-xs text-amber-600 mt-0.5">If you register with a partner, they do not need to register separately.</p>
+                    </div>
                   </div>
                   {form.hasPartner && (
                     <div className="mt-4 space-y-3 border-t border-amber-200 pt-4">
@@ -391,7 +396,7 @@ export default function JoinPage() {
               <div className="space-y-4">
                 <h3 className="font-semibold text-amber-900 border-b border-amber-100 pb-2">Address</h3>
                 <div className="space-y-2">
-                  <Label htmlFor="address">Home Address <span className="text-xs font-normal text-muted-foreground">(optional)</span></Label>
+                  <Label htmlFor="address">Home Address *</Label>
                   <Textarea
                     id="address"
                     placeholder="Street name, number, postal code, city"
@@ -466,6 +471,42 @@ export default function JoinPage() {
           {submitError && (
             <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{submitError}</div>
           )}
+
+          {/* Running Dinner Explanation */}
+          <Card className="overflow-hidden rounded-2xl border-2 border-amber-200/50 bg-white/80">
+            <div className="h-1.5 bg-gradient-to-r from-orange-400 via-amber-400 to-yellow-400" />
+            <CardContent className="p-6 space-y-4">
+              <h2 className="text-lg font-bold text-amber-900">🍽️ What is a Running Dinner?</h2>
+              <p className="text-sm text-amber-800">A Running Dinner is a social dining experience where participants share a multi-course meal — but each course takes place at a different home!</p>
+              <div className="space-y-3">
+                <div className="flex gap-3">
+                  <span className="text-lg">1️⃣</span>
+                  <div>
+                    <p className="font-medium text-amber-900 text-sm">Appetizer</p>
+                    <p className="text-xs text-amber-700">You start at your first hosts' home with one other couple. Get to know each other and warm up for the night!</p>
+                  </div>
+                </div>
+                <div className="flex gap-3">
+                  <span className="text-lg">2️⃣</span>
+                  <div>
+                    <p className="font-medium text-amber-900 text-sm">Main Course</p>
+                    <p className="text-xs text-amber-700">Everyone moves on — a completely different home, a brand new group of people, fresh conversations.</p>
+                  </div>
+                </div>
+                <div className="flex gap-3">
+                  <span className="text-lg">3️⃣</span>
+                  <div>
+                    <p className="font-medium text-amber-900 text-sm">Dessert</p>
+                    <p className="text-xs text-amber-700">The grand finale — yet another home, yet another wonderful group of people!</p>
+                  </div>
+                </div>
+              </div>
+              <div className="rounded-xl bg-amber-50 p-3 text-xs text-amber-800 space-y-1">
+                <p><strong>🏠 Your role as host:</strong> Every team hosts exactly one course at home — simple and homemade is perfect!</p>
+                <p><strong>🤝 The magic:</strong> By the end of the evening you will have shared a meal with up to 10 different people from your community.</p>
+              </div>
+            </CardContent>
+          </Card>
 
           {/* Submit */}
           <Button
