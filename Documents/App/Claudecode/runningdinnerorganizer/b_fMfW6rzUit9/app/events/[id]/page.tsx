@@ -45,7 +45,10 @@ import {
   PartyPopper,
   Loader2,
   Check,
+  Pencil,
+  X,
 } from 'lucide-react'
+import { Input } from '@/components/ui/input'
 
 type EventStatus = 'draft' | 'registration_open' | 'registration_closed' | 'teams_assigned' | 'completed'
 
@@ -92,6 +95,9 @@ export default function EventDetailPage() {
   const [isDeleting, setIsDeleting] = useState(false)
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [editingDeadline, setEditingDeadline] = useState(false)
+  const [deadlineValue, setDeadlineValue] = useState('')
+  const [isSavingDeadline, setIsSavingDeadline] = useState(false)
 
   useEffect(() => {
     async function fetchEvent() {
@@ -138,7 +144,11 @@ export default function EventDetailPage() {
     )
   }
 
-  const status = statusConfig[event.status] ?? statusConfig.draft
+  const deadlinePassed = new Date(event.registrationDeadline) < new Date()
+  const effectiveStatus = (event.status === 'registration_open' && deadlinePassed)
+    ? 'registration_closed'
+    : event.status
+  const status = statusConfig[effectiveStatus] ?? statusConfig.draft
   const StatusIcon = status.icon
 
   const inviteLink = event.inviteToken
@@ -168,6 +178,26 @@ export default function EventDetailPage() {
       // silently fail — user can retry via dropdown
     } finally {
       setIsUpdatingStatus(false)
+    }
+  }
+
+  const saveDeadline = async () => {
+    if (!deadlineValue) return
+    setIsSavingDeadline(true)
+    try {
+      const res = await fetch(`/api/events/${eventId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ registrationDeadline: deadlineValue }),
+      })
+      if (!res.ok) throw new Error('Failed to update deadline')
+      const data = await res.json()
+      setEvent(data.event)
+      setEditingDeadline(false)
+    } catch {
+      // silently fail
+    } finally {
+      setIsSavingDeadline(false)
     }
   }
 
@@ -425,9 +455,31 @@ export default function EventDetailPage() {
                 <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-purple-200">
                   <Clock className="h-5 w-5 text-purple-700" />
                 </div>
-                <div>
+                <div className="flex-1">
                   <p className="font-medium text-purple-900">Registration Deadline</p>
-                  <p className="text-sm text-purple-700">{format(new Date(event.registrationDeadline), 'MMMM d, yyyy')}</p>
+                  {editingDeadline ? (
+                    <div className="mt-1 flex items-center gap-2">
+                      <Input
+                        type="date"
+                        value={deadlineValue}
+                        onChange={(e) => setDeadlineValue(e.target.value)}
+                        className="h-7 w-40 text-sm"
+                      />
+                      <button onClick={saveDeadline} disabled={isSavingDeadline} className="text-green-600 hover:text-green-800">
+                        {isSavingDeadline ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                      </button>
+                      <button onClick={() => setEditingDeadline(false)} className="text-gray-400 hover:text-gray-600">
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm text-purple-700">{format(new Date(event.registrationDeadline), 'MMMM d, yyyy')}</p>
+                      <button onClick={() => { setDeadlineValue(event.registrationDeadline.slice(0, 10)); setEditingDeadline(true) }} className="text-purple-400 hover:text-purple-700">
+                        <Pencil className="h-3 w-3" />
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
 
