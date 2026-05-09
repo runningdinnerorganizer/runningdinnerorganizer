@@ -1,9 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createServerClient } from '@supabase/ssr'
-import { Resend } from 'resend'
+import nodemailer from 'nodemailer'
 
-const resend = new Resend(process.env.RESEND_API_KEY)
+const transporter = nodemailer.createTransport({
+  host: 'smtp-relay.brevo.com',
+  port: 587,
+  auth: {
+    user: process.env.BREVO_SMTP_USER,
+    pass: process.env.BREVO_SMTP_KEY,
+  },
+})
 
 type RouteContext = { params: Promise<{ id: string }> }
 
@@ -110,18 +117,18 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
       return NextResponse.json({ sent: 0, logs: [] })
     }
 
-    const fromAddress = process.env.EMAIL_FROM ?? 'onboarding@resend.dev'
+    const fromAddress = process.env.EMAIL_FROM ?? 'runningdinnerorganizer@gmail.com'
     const adminClient = createAdminClient()
     const now = new Date().toISOString()
     const rows: Record<string, unknown>[] = []
 
-    // Send each email via Resend
+    // Send each email via Brevo SMTP
     for (const p of participants) {
       const personalizedBody = emailBody.replace(/\{\{firstName\}\}/g, p.first_name)
       let status = 'sent'
 
       try {
-        await resend.emails.send({
+        await transporter.sendMail({
           from: fromAddress,
           to: p.email,
           subject,
