@@ -67,6 +67,10 @@ interface ApiEvent {
   registrationActive: boolean
 }
 
+function fmt(time: string) {
+  return time?.slice(0, 5) ?? time
+}
+
 const statusConfig: Record<EventStatus, { label: string; color: string; description: string; icon: React.ComponentType<{ className?: string }> }> = {
   draft: { label: 'Draft', color: 'bg-gray-100 text-gray-700 border-gray-300', description: 'Event is not yet visible to participants', icon: Clock },
   registration_open: { label: 'Registration Open', color: 'bg-green-100 text-green-700 border-green-300', description: 'Participants can register for this event', icon: Sparkles },
@@ -427,7 +431,7 @@ export default function EventDetailPage() {
                     <p className="text-xs text-green-700">First course</p>
                   </div>
                 </div>
-                <p className="text-sm font-medium text-green-800">{event.appetizerTime}</p>
+                <p className="text-sm font-medium text-green-800">{fmt(event.appetizerTime)}</p>
               </div>
 
               <div className="flex items-center justify-between rounded-xl bg-orange-50 p-4">
@@ -440,7 +444,7 @@ export default function EventDetailPage() {
                     <p className="text-xs text-orange-700">Second course</p>
                   </div>
                 </div>
-                <p className="text-sm font-medium text-orange-800">{event.mainTime}</p>
+                <p className="text-sm font-medium text-orange-800">{fmt(event.mainTime)}</p>
               </div>
 
               <div className="flex items-center justify-between rounded-xl bg-pink-50 p-4">
@@ -453,7 +457,7 @@ export default function EventDetailPage() {
                     <p className="text-xs text-pink-700">Final course</p>
                   </div>
                 </div>
-                <p className="text-sm font-medium text-pink-800">{event.dessertTime}</p>
+                <p className="text-sm font-medium text-pink-800">{fmt(event.dessertTime)}</p>
               </div>
             </CardContent>
           </Card>
