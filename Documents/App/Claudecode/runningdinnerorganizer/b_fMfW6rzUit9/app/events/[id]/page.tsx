@@ -428,7 +428,6 @@ export default function EventDetailPage() {
                   </div>
                   <div>
                     <p className="font-medium text-green-900">Appetizer</p>
-                    <p className="text-xs text-green-700">First course</p>
                   </div>
                 </div>
                 <p className="text-sm font-medium text-green-800">{fmt(event.appetizerTime)}</p>
@@ -441,7 +440,6 @@ export default function EventDetailPage() {
                   </div>
                   <div>
                     <p className="font-medium text-orange-900">Main Course</p>
-                    <p className="text-xs text-orange-700">Second course</p>
                   </div>
                 </div>
                 <p className="text-sm font-medium text-orange-800">{fmt(event.mainTime)}</p>
@@ -454,7 +452,6 @@ export default function EventDetailPage() {
                   </div>
                   <div>
                     <p className="font-medium text-pink-900">Dessert</p>
-                    <p className="text-xs text-pink-700">Final course</p>
                   </div>
                 </div>
                 <p className="text-sm font-medium text-pink-800">{fmt(event.dessertTime)}</p>
