@@ -57,10 +57,10 @@ export async function POST(
     }
 
     // Fetch all participants for this dinner
-    const { data: participants, error: participantsError } = await supabase
+    const { data: rawParticipants, error: participantsError } = await supabase
       .from('participants')
       .select(
-        'id, first_name, last_name, email, address, lat, lng, dietary_restrictions, has_partner, partner_email, can_host_solo',
+        'id, first_name, last_name, email, address, lat, lng, dietary_restrictions, has_partner, partner_name, partner_email, partner_phone, can_host_solo',
       )
       .eq('dinner_id', id)
 
@@ -71,7 +71,7 @@ export async function POST(
       )
     }
 
-    if (!participants || participants.length === 0) {
+    if (!rawParticipants || rawParticipants.length === 0) {
       return NextResponse.json(
         { error: 'No participants found for this event.' },
         { status: 400 },
@@ -84,6 +84,43 @@ export async function POST(
       process.env.SUPABASE_SERVICE_ROLE_KEY!,
       { cookies: { getAll: () => [], setAll: () => {} } },
     )
+
+    // Ensure every couple registration has a matching participant row for the partner.
+    // A couple registers as one row (has_partner = true, partner_email set); the partner
+    // needs their own DB row so the algorithm can pair them and teams can reference them.
+    const existingEmails = new Set(rawParticipants.map((p) => p.email))
+    for (const p of rawParticipants) {
+      if (!p.has_partner || !p.partner_email) continue
+      if (existingEmails.has(p.partner_email)) continue // partner already has a row
+
+      const nameParts = (p.partner_name ?? '').trim().split(/\s+/)
+      const partnerFirstName = nameParts[0] || 'Partner'
+      const partnerLastName = nameParts.slice(1).join(' ') || ''
+
+      const { data: inserted } = await adminClient
+        .from('participants')
+        .insert({
+          dinner_id: id,
+          first_name: partnerFirstName,
+          last_name: partnerLastName,
+          email: p.partner_email,
+          phone: p.partner_phone ?? null,
+          address: p.address,
+          lat: p.lat ?? null,
+          lng: p.lng ?? null,
+          dietary_restrictions: [],
+          has_partner: false,
+        })
+        .select('id, first_name, last_name, email, address, lat, lng, dietary_restrictions, has_partner, partner_name, partner_email, partner_phone, can_host_solo')
+        .single()
+
+      if (inserted) {
+        rawParticipants.push(inserted)
+        existingEmails.add(inserted.email)
+      }
+    }
+
+    const participants = rawParticipants
 
     // Map DB rows → ParticipantInput[]
     const inputs: ParticipantInput[] = participants.map((p) => ({
