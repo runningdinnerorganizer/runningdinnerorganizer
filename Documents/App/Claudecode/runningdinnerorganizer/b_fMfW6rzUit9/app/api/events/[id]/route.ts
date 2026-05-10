@@ -30,18 +30,13 @@ export async function GET(_request: NextRequest, { params }: RouteContext) {
       return NextResponse.json({ error: 'Event not found' }, { status: 404 })
     }
 
-    // Fetch participants to count actual people (each registration can be 1 or 2 persons)
-    const { data: participants, error: countError } = await supabase
+    // Count participants — each person has exactly one DB row (partner rows are created at registration time)
+    const { count: participantCount, error: countError } = await supabase
       .from('participants')
-      .select('has_partner')
+      .select('id', { count: 'exact', head: true })
       .eq('dinner_id', id)
 
     if (countError) throw countError
-
-    const participantCount = (participants ?? []).reduce(
-      (sum, p) => sum + (p.has_partner ? 2 : 1),
-      0
-    )
 
     return NextResponse.json({
       event: mapEvent(event),

@@ -147,6 +147,38 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
 
     if (insertError) throw insertError
 
+    // If this is a couple registration, immediately create a DB row for the partner too.
+    // This ensures the algorithm always receives one row per person, not one row per registration.
+    if (hasPartner && partnerName && partnerEmail) {
+      const nameParts = (partnerName as string).trim().split(/\s+/)
+      const partnerFirstName = nameParts[0] || 'Partner'
+      const partnerLastName = nameParts.slice(1).join(' ') || ''
+
+      // Only insert if the partner hasn't already registered independently
+      const { data: existingPartner } = await supabase
+        .from('participants')
+        .select('id')
+        .eq('dinner_id', id)
+        .eq('email', partnerEmail)
+        .maybeSingle()
+
+      if (!existingPartner) {
+        await supabase.from('participants').insert({
+          dinner_id: id,
+          first_name: partnerFirstName,
+          last_name: partnerLastName,
+          email: partnerEmail,
+          phone: partnerPhone ?? null,
+          address: address ?? null,
+          lat: lat ?? null,
+          lng: lng ?? null,
+          dietary_restrictions: [],
+          has_partner: false,
+          can_host_solo: canHostSolo ?? true,
+        })
+      }
+    }
+
     // Send welcome email
     try {
       const eventTitle = dinner.public_title || dinner.title
