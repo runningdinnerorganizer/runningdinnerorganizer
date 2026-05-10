@@ -49,6 +49,28 @@ export interface CourseAssignmentResult {
   guestTeam2Id: string
 }
 
+/**
+ * Options to control which optimisations the algorithm applies.
+ * Both default to true when omitted.
+ */
+export interface AlgorithmOptions {
+  /**
+   * When true (default): guest teams are routed to hosts whose dietary offerings
+   * are compatible with the guests' restrictions. Vegans and vegetarians are
+   * preferentially seated at hosts who cater for them.
+   * When false: dietary compatibility is ignored during table assignment
+   * (incompatibilities still appear as warnings).
+   */
+  optimiseDietary?: boolean
+  /**
+   * When true (default): teams are geo-clustered by hosting course and routes
+   * are optimised to minimise total travel distance.
+   * When false: geographic position is ignored; teams are assigned purely by
+   * the no-repeat constraint.
+   */
+  optimiseDistance?: boolean
+}
+
 export interface AlgorithmResult {
   success: boolean
   teams: TeamResult[]
@@ -59,7 +81,10 @@ export interface AlgorithmResult {
     totalParticipants: number
     totalTeams: number
     tablesPerCourse: number
-    oddPersonOut?: string
+    waitlistedIds: string[]      // participant ids that cannot join this round
+    missingForNextRound: number  // how many more signups are needed to include them
+    repeatedMeetingCount: number // 0 when strict no-repeat succeeded
+    validationSummary: string[]  // human-readable quality checks
   }
 }
 
@@ -234,6 +259,65 @@ function pairKey(a: string, b: string): string {
   return a < b ? `${a}|${b}` : `${b}|${a}`
 }
 
+/** Fisher-Yates shuffle — returns a new shuffled array */
+function shuffleArray<T>(arr: T[]): T[] {
+  const a = [...arr]
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[a[i], a[j]] = [a[j], a[i]]
+  }
+  return a
+}
+
+/** Rebuild the set of all pair-meetings from a finished assignment list */
+function buildMetPairsSet(assignments: CourseAssignmentResult[]): Set<string> {
+  const set = new Set<string>()
+  for (const a of assignments) {
+    set.add(pairKey(a.hostTeamId, a.guestTeam1Id))
+    set.add(pairKey(a.hostTeamId, a.guestTeam2Id))
+    set.add(pairKey(a.guestTeam1Id, a.guestTeam2Id))
+  }
+  return set
+}
+
+// ---------------------------------------------------------------------------
+// Dietary penalty cache
+// ---------------------------------------------------------------------------
+
+/**
+ * Maps "hostTeamId>guestTeamId" → number of dietary incompatibilities.
+ * A value of 0 means the guest team can safely eat at this host.
+ * Used by the greedy to prefer compatible pairings.
+ */
+type DietaryPenaltyCache = Map<string, number>
+
+/**
+ * Pre-computes dietary incompatibility scores for every (host, guest) pair.
+ * Only considers host member1's restrictions as a proxy for what the household offers.
+ */
+function buildDietaryPenaltyCache(
+  teams: TeamResult[],
+  participantById: Map<string, ParticipantInput>,
+): DietaryPenaltyCache {
+  const cache = new Map<string, number>()
+  for (const host of teams) {
+    const hostMember = participantById.get(host.member1Id)
+    const hostRestrictions = hostMember?.dietaryRestrictions ?? []
+    for (const guest of teams) {
+      if (host.id === guest.id) continue
+      let penalty = 0
+      for (const memberId of [guest.member1Id, guest.member2Id]) {
+        const member = participantById.get(memberId)
+        if (member && !dietaryCompatible(member.dietaryRestrictions, hostRestrictions)) {
+          penalty++
+        }
+      }
+      cache.set(`${host.id}>${guest.id}`, penalty)
+    }
+  }
+  return cache
+}
+
 /**
  * Calculate the total travel distance for a single team's evening journey.
  * Route: appetizer host location → main host location → dessert host location.
@@ -385,7 +469,7 @@ const COURSES: Course[] = ['appetizer', 'main', 'dessert']
  * If coordinates are available, try to improve geographic clustering by swapping
  * teams within the same course group.
  */
-function assignHostingCourses(rawTeams: RawTeam[]): TeamResult[] {
+function assignHostingCourses(rawTeams: RawTeam[], optimiseDistance = true): TeamResult[] {
   // Initial assignment: round-robin
   const teams: TeamResult[] = rawTeams.map((rt, index) => {
     const course = COURSES[index % 3]
@@ -406,9 +490,9 @@ function assignHostingCourses(rawTeams: RawTeam[]): TeamResult[] {
 
   // Geographic clustering optimisation:
   // Within each pair of course buckets, try swapping teams to minimise
-  // the centroid spread of each course group. Only attempt if coords exist.
+  // the centroid spread of each course group. Only attempt if coords exist and distance opt is on.
   const hasCoords = teams.some((t) => t.hostLat != null && t.hostLng != null)
-  if (!hasCoords) return teams
+  if (!hasCoords || !optimiseDistance) return teams
 
   // Simple swap improvement: try all pairs within different course groups and
   // keep the swap if it reduces total intra-course distance variance.
@@ -469,6 +553,109 @@ function courseSpreadScore(teams: TeamResult[]): number {
     }
   }
   return total
+}
+
+// ---------------------------------------------------------------------------
+// Step 5a — Greedy guest assignment (soft constraint: minimise repeats)
+// ---------------------------------------------------------------------------
+
+/**
+ * Single greedy pass over all courses.
+ * For each host (in the given order) pick the pair of available guests that
+ * introduces the fewest already-seen pair-meetings.
+ * Always succeeds as long as team count is divisible by 3.
+ */
+function assignGuestsGreedyOnce(
+  coreTeams: TeamResult[],
+  hostOrders: Record<Course, TeamResult[]>,
+  dietaryCache?: DietaryPenaltyCache,
+): { assignments: CourseAssignmentResult[]; repeatCount: number } {
+  const metPairs = new Set<string>()
+  const assignments: CourseAssignmentResult[] = []
+  let repeatCount = 0
+
+  for (const course of COURSES) {
+    const hosts = hostOrders[course]
+    const guestPool = coreTeams.filter((t) => t.hostingCourse !== course)
+    const usedGuests = new Set<string>()
+
+    for (const host of hosts) {
+      const available = guestPool.filter((g) => !usedGuests.has(g.id))
+
+      let bestPair: [TeamResult, TeamResult] = [available[0], available[1]]
+      let bestScore = Infinity
+
+      for (let i = 0; i < available.length - 1; i++) {
+        for (let j = i + 1; j < available.length; j++) {
+          const g1 = available[i]
+          const g2 = available[j]
+          // Repeat-meeting penalty (highest priority)
+          let score = 0
+          if (metPairs.has(pairKey(host.id, g1.id))) score += 10
+          if (metPairs.has(pairKey(host.id, g2.id))) score += 10
+          if (metPairs.has(pairKey(g1.id, g2.id))) score += 10
+          // Dietary incompatibility penalty (lower priority than repeats)
+          if (dietaryCache) {
+            score += (dietaryCache.get(`${host.id}>${g1.id}`) ?? 0) * 3
+            score += (dietaryCache.get(`${host.id}>${g2.id}`) ?? 0) * 3
+          }
+          if (score < bestScore) {
+            bestScore = score
+            bestPair = [g1, g2]
+          }
+        }
+      }
+
+      const [g1, g2] = bestPair
+      if (metPairs.has(pairKey(host.id, g1.id))) repeatCount++
+      if (metPairs.has(pairKey(host.id, g2.id))) repeatCount++
+      if (metPairs.has(pairKey(g1.id, g2.id))) repeatCount++
+
+      assignments.push({ course, hostTeamId: host.id, guestTeam1Id: g1.id, guestTeam2Id: g2.id })
+      usedGuests.add(g1.id)
+      usedGuests.add(g2.id)
+      metPairs.add(pairKey(host.id, g1.id))
+      metPairs.add(pairKey(host.id, g2.id))
+      metPairs.add(pairKey(g1.id, g2.id))
+    }
+  }
+
+  return { assignments, repeatCount }
+}
+
+/**
+ * Run multiple greedy passes with shuffled host orderings and return
+ * the result with the fewest repeated pair-meetings.
+ */
+function assignGuestsBestGreedy(
+  coreTeams: TeamResult[],
+  dietaryCache?: DietaryPenaltyCache,
+): {
+  assignments: CourseAssignmentResult[]
+  repeatCount: number
+} {
+  const teamsByCourse = {
+    appetizer: coreTeams.filter((t) => t.hostingCourse === 'appetizer'),
+    main: coreTeams.filter((t) => t.hostingCourse === 'main'),
+    dessert: coreTeams.filter((t) => t.hostingCourse === 'dessert'),
+  } as Record<Course, TeamResult[]>
+
+  let best = assignGuestsGreedyOnce(coreTeams, teamsByCourse, dietaryCache)
+  if (best.repeatCount === 0) return best
+
+  const NUM_TRIES = 40
+  for (let t = 1; t < NUM_TRIES; t++) {
+    const shuffledOrders: Record<Course, TeamResult[]> = {
+      appetizer: shuffleArray(teamsByCourse.appetizer),
+      main: shuffleArray(teamsByCourse.main),
+      dessert: shuffleArray(teamsByCourse.dessert),
+    }
+    const result = assignGuestsGreedyOnce(coreTeams, shuffledOrders, dietaryCache)
+    if (result.repeatCount < best.repeatCount) best = result
+    if (best.repeatCount === 0) break
+  }
+
+  return best
 }
 
 // ---------------------------------------------------------------------------
@@ -600,6 +787,28 @@ function assignGuestsForCourse(
   return success ? assignments : null
 }
 
+/**
+ * Try strict backtracking first. If it fails (impossible for small events or
+ * unfortunate team counts), fall back to the greedy minimise-repeats approach.
+ *
+ * Returns assignments plus the number of unavoidable repeated pair-meetings
+ * (0 when the strict solution was found).
+ */
+function assignGuestsWithFallback(
+  teams: TeamResult[],
+  dietaryCache?: DietaryPenaltyCache,
+): {
+  assignments: CourseAssignmentResult[]
+  repeatedMeetingCount: number
+} {
+  const strict = assignGuests(teams)
+  if (strict !== null) {
+    return { assignments: strict, repeatedMeetingCount: 0 }
+  }
+  // Strict failed — use best greedy (with dietary awareness if requested)
+  return assignGuestsBestGreedy(teams, dietaryCache)
+}
+
 // ---------------------------------------------------------------------------
 // Step 6 — Route Optimisation via Swap
 // ---------------------------------------------------------------------------
@@ -682,28 +891,32 @@ function optimiseRoutes(
  *   console.log(result.assignments)
  * }
  */
-export function assignTeams(participants: ParticipantInput[]): AlgorithmResult {
+export function assignTeams(
+  participants: ParticipantInput[],
+  options: AlgorithmOptions = {},
+): AlgorithmResult {
+  const { optimiseDietary = true, optimiseDistance = true } = options
   const errors: string[] = []
   const warnings: string[] = []
 
   // ------------------------------------------------------------------
-  // Step 1: Handle odd participant count
+  // Step 1: Waitlist participants so the remaining count is divisible by 6
+  // (Running Dinner requires exactly 6 people per table = 3 teams per table × 3 courses)
   // ------------------------------------------------------------------
+  const excess = participants.length % 6
+  const waitlistedIds: string[] = []
   let workingList = participants.slice()
-  let oddPersonOut: string | undefined
 
-  if (workingList.length % 2 !== 0) {
-    const removed = workingList[workingList.length - 1]
-    oddPersonOut = removed.id
-    workingList = workingList.slice(0, -1)
-    warnings.push(
-      `Odd number of participants. Participant "${removed.firstName} ${removed.lastName}" (id: ${removed.id}) has been removed from this event and should be placed on a waiting list.`,
-    )
+  if (excess > 0) {
+    const removed = workingList.splice(workingList.length - excess, excess)
+    waitlistedIds.push(...removed.map((p) => p.id))
   }
+
+  const missingForNextRound = excess === 0 ? 0 : 6 - excess
 
   if (workingList.length < 6) {
     errors.push(
-      `Not enough participants to form a valid Running Dinner event. Minimum 6 participants required, got ${workingList.length}.`,
+      `Not enough participants. At least 6 are required for a Running Dinner (3 teams × 2 courses × 1 table). Currently ${participants.length} signed up.`,
     )
     return {
       success: false,
@@ -715,124 +928,135 @@ export function assignTeams(participants: ParticipantInput[]): AlgorithmResult {
         totalParticipants: participants.length,
         totalTeams: 0,
         tablesPerCourse: 0,
-        oddPersonOut,
+        waitlistedIds,
+        missingForNextRound,
+        repeatedMeetingCount: 0,
+        validationSummary: [],
       },
     }
   }
 
   // ------------------------------------------------------------------
-  // Step 2: Form teams
+  // Step 2: Form 2-person teams
   // ------------------------------------------------------------------
   const rawTeams = formTeams(workingList)
+  const tablesPerCourse = rawTeams.length / 3 // guaranteed integer because workingList.length % 6 === 0
 
   // ------------------------------------------------------------------
-  // Step 3: Validate team count is divisible by 3
+  // Step 3: Assign hosting courses (with optional geo-clustering)
   // ------------------------------------------------------------------
-  if (rawTeams.length % 3 !== 0) {
-    errors.push(
-      `Total number of teams (${rawTeams.length}) is not divisible by 3. A Running Dinner requires exactly 3 teams per table. Please ensure the participant count results in a team count divisible by 3.`,
-    )
-    return {
-      success: false,
-      teams: [],
-      assignments: [],
-      errors,
-      warnings,
-      stats: {
-        totalParticipants: participants.length,
-        totalTeams: rawTeams.length,
-        tablesPerCourse: 0,
-        oddPersonOut,
-      },
-    }
-  }
-
-  const tablesPerCourse = rawTeams.length / 3
+  const teams = assignHostingCourses(rawTeams, optimiseDistance)
 
   // ------------------------------------------------------------------
-  // Step 4: Assign hosting courses (with optional geo-clustering)
+  // Step 4: Build dietary penalty cache (only when dietary opt is on)
   // ------------------------------------------------------------------
-  const teams = assignHostingCourses(rawTeams)
-
-  // ------------------------------------------------------------------
-  // Step 5: Assign guests (backtracking constraint satisfaction)
-  // ------------------------------------------------------------------
-  const assignments = assignGuests(teams)
-
-  if (assignments === null) {
-    errors.push(
-      'Could not find a valid guest assignment that satisfies the no-repeated-meeting constraint. This can happen with very small or geometrically constrained participant sets. Please try adding more participants or adjusting pairings.',
-    )
-    return {
-      success: false,
-      teams,
-      assignments: [],
-      errors,
-      warnings,
-      stats: {
-        totalParticipants: participants.length,
-        totalTeams: teams.length,
-        tablesPerCourse,
-        oddPersonOut,
-      },
-    }
-  }
-
-  // ------------------------------------------------------------------
-  // Step 6: Route optimisation
-  // ------------------------------------------------------------------
-  const optimisedAssignments = optimiseRoutes(teams, assignments)
-
-  // ------------------------------------------------------------------
-  // Step 7: Final validation and result
-  // ------------------------------------------------------------------
-  const validationErrors = validateAssignments(teams, optimisedAssignments)
-  if (validationErrors.length > 0) {
-    // Should not happen, but surface as errors rather than silently returning
-    // bad data.
-    for (const e of validationErrors) {
-      errors.push(`[Post-validation] ${e}`)
-    }
-  }
-
-  // Warn about dietary mismatches that may exist despite best-effort matching
-  const teamById = new Map(teams.map((t) => [t.id, t]))
   const participantById = new Map(workingList.map((p) => [p.id, p]))
+  const dietaryCache = optimiseDietary
+    ? buildDietaryPenaltyCache(teams, participantById)
+    : undefined
 
-  for (const assignment of optimisedAssignments) {
+  // ------------------------------------------------------------------
+  // Step 5: Assign guests (strict backtracking → greedy fallback)
+  // ------------------------------------------------------------------
+  const { assignments: rawAssignments, repeatedMeetingCount } =
+    assignGuestsWithFallback(teams, dietaryCache)
+
+  if (repeatedMeetingCount > 0) {
+    warnings.push(
+      `This event is too small for every pair to meet only once. ${repeatedMeetingCount} pair(s) will share a table more than once — this is mathematically unavoidable at this size.`,
+    )
+  }
+
+  // ------------------------------------------------------------------
+  // Step 6: Route optimisation (skip when distance opt is off)
+  // ------------------------------------------------------------------
+  const finalAssignments = optimiseDistance
+    ? optimiseRoutes(teams, rawAssignments)
+    : rawAssignments
+
+  // ------------------------------------------------------------------
+  // Step 7: Build validation summary + dietary warnings
+  // ------------------------------------------------------------------
+  const validationErrors = validateAssignments(teams, finalAssignments)
+  for (const e of validationErrors) {
+    errors.push(`[Validation] ${e}`)
+  }
+
+  const validationSummary: string[] = []
+
+  // Check 1: unique encounters
+  if (repeatedMeetingCount === 0) {
+    validationSummary.push('✓ Every team meets a different group at each course.')
+  } else {
+    validationSummary.push(
+      `⚠ ${repeatedMeetingCount} pair(s) meet more than once (unavoidable at this event size).`,
+    )
+  }
+
+  // Check 2: dietary compatibility
+  const teamById = new Map(teams.map((t) => [t.id, t]))
+  let dietaryMismatches = 0
+  for (const assignment of finalAssignments) {
     const hostTeam = teamById.get(assignment.hostTeamId)
     if (!hostTeam) continue
-
-    const hostMember1 = participantById.get(hostTeam.member1Id)
-    const hostRestrictions = hostMember1?.dietaryRestrictions ?? []
-
+    const hostMember = participantById.get(hostTeam.member1Id)
+    const hostRestrictions = hostMember?.dietaryRestrictions ?? []
     for (const guestId of [assignment.guestTeam1Id, assignment.guestTeam2Id]) {
       const guestTeam = teamById.get(guestId)
       if (!guestTeam) continue
-
       for (const memberId of [guestTeam.member1Id, guestTeam.member2Id]) {
         const member = participantById.get(memberId)
         if (!member) continue
         if (!dietaryCompatible(member.dietaryRestrictions, hostRestrictions)) {
+          dietaryMismatches++
           warnings.push(
-            `Dietary mismatch: participant "${member.firstName} ${member.lastName}" (${member.dietaryRestrictions.join(', ')}) is assigned as guest at team ${assignment.hostTeamId} during ${assignment.course}. The host may not be able to accommodate their dietary needs.`,
+            `Dietary mismatch: ${member.firstName} ${member.lastName} (${member.dietaryRestrictions.join(', ')}) visits team ${assignment.hostTeamId} at ${assignment.course}. The host may not cater for their needs.`,
           )
         }
       }
     }
   }
+  if (optimiseDietary && dietaryMismatches === 0) {
+    validationSummary.push('✓ All guest–host pairings are dietarily compatible.')
+  } else if (dietaryMismatches > 0) {
+    validationSummary.push(
+      `⚠ ${dietaryMismatches} dietary mismatch(es) detected${optimiseDietary ? ' — could not be fully resolved with this group' : ' (dietary optimisation was off)'}.`,
+    )
+  }
+
+  // Check 3: distance
+  const hasCoords = teams.some((t) => t.hostLat != null && t.hostLng != null)
+  if (!hasCoords) {
+    validationSummary.push('ℹ No coordinates available — distance optimisation was skipped.')
+  } else if (optimiseDistance) {
+    validationSummary.push('✓ Routes have been optimised to minimise travel distance.')
+  } else {
+    validationSummary.push('ℹ Distance optimisation was turned off.')
+  }
+
+  // Check 4: waitlist
+  if (waitlistedIds.length === 0) {
+    validationSummary.push('✓ All registered participants are included.')
+  } else {
+    validationSummary.push(
+      `⚠ ${waitlistedIds.length} participant(s) waitlisted. ${missingForNextRound} more signup(s) needed to include them.`,
+    )
+  }
 
   return {
     success: errors.length === 0,
     teams,
-    assignments: optimisedAssignments,
+    assignments: finalAssignments,
     errors,
     warnings,
     stats: {
       totalParticipants: participants.length,
       totalTeams: teams.length,
       tablesPerCourse,
-      oddPersonOut,
+      waitlistedIds,
+      missingForNextRound,
+      repeatedMeetingCount,
+      validationSummary,
     },
   }
 }

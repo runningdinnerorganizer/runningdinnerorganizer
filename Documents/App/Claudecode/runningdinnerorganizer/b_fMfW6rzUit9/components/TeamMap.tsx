@@ -89,12 +89,12 @@ export default function TeamMap({ teams, onPinMove }: TeamMapProps) {
       // Find teams with coordinates
       const teamsWithCoords = teams.filter(t => t.hostLat != null && t.hostLng != null)
 
-      // Default center: Germany or first team
+      // Default center: Matrimandir, Auroville (Tamil Nadu, India) when no coords available
       const defaultCenter: [number, number] = teamsWithCoords.length > 0
         ? [teamsWithCoords[0].hostLat!, teamsWithCoords[0].hostLng!]
-        : [51.1657, 10.4515]
+        : [11.9344, 79.8115]
 
-      const map = L.map(container).setView(defaultCenter, teamsWithCoords.length > 0 ? 13 : 6)
+      const map = L.map(container).setView(defaultCenter, teamsWithCoords.length > 0 ? 13 : 14)
       mapRef.current = map
 
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {

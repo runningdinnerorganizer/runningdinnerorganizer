@@ -77,11 +77,23 @@ export function EventCard({ event, participantCount }: EventCardProps) {
               </span>
             </div>
             <div className="h-2 overflow-hidden rounded-full bg-amber-100">
-              <div 
+              <div
                 className="h-full rounded-full bg-gradient-to-r from-orange-400 to-amber-400 transition-all duration-500"
                 style={{ width: `${progressPercent}%` }}
               />
             </div>
+            {/* Show how many more needed for a valid round (multiple of 6) */}
+            {(() => {
+              const missing = participantCount % 6 === 0 ? 0 : 6 - (participantCount % 6)
+              if (missing === 0) return (
+                <p className="text-xs font-medium text-emerald-600">✓ Ready to generate teams</p>
+              )
+              return (
+                <p className="text-xs text-orange-600">
+                  {missing} more needed for next valid round
+                </p>
+              )
+            })()}
           </div>
         </CardContent>
         

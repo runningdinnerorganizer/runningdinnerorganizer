@@ -5,6 +5,7 @@ import {
   assignTeams,
   type ParticipantInput,
   type DietaryRestriction,
+  type AlgorithmOptions,
 } from '@/lib/algorithm'
 import { geocodeAddress, sleep } from '@/lib/geocoding'
 
@@ -13,11 +14,23 @@ import { geocodeAddress, sleep } from '@/lib/geocoding'
 // Runs the team assignment algorithm and persists the results to the database.
 // ---------------------------------------------------------------------------
 export async function POST(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const { id } = await params
+
+    // Parse optional algorithm options from request body
+    let options: AlgorithmOptions = {}
+    try {
+      const body = await req.json()
+      options = {
+        optimiseDietary: body.optimiseDietary ?? true,
+        optimiseDistance: body.optimiseDistance ?? true,
+      }
+    } catch {
+      // No body or invalid JSON — use defaults
+    }
     const supabase = await createClient()
 
     // Auth check
@@ -156,7 +169,7 @@ export async function POST(
     }
 
     // Run the algorithm
-    const result = assignTeams(inputs)
+    const result = assignTeams(inputs, options)
 
     // Return errors early — do not persist invalid results
     if (result.errors.length > 0) {
@@ -269,13 +282,25 @@ export async function POST(
       guestTeam2Id: algorithmToDbId.get(a.guestTeam2Id),
     }))
 
+    // Resolve waitlisted participant details for the response
+    const waitlistedParticipants = result.stats.waitlistedIds.map((wId) => {
+      const p = participants.find((x) => x.id === wId)
+      return p
+        ? { id: p.id, firstName: p.first_name, lastName: p.last_name, email: p.email }
+        : { id: wId, firstName: '?', lastName: '', email: '' }
+    })
+
     return NextResponse.json({
       success: true,
       stats: {
         totalTeams: result.stats.totalTeams,
         tablesPerCourse: result.stats.tablesPerCourse,
-        oddPersonOut: result.stats.oddPersonOut ?? null,
+        waitlistedCount: result.stats.waitlistedIds.length,
+        missingForNextRound: result.stats.missingForNextRound,
+        repeatedMeetingCount: result.stats.repeatedMeetingCount,
+        validationSummary: result.stats.validationSummary,
       },
+      waitlisted: waitlistedParticipants,
       warnings: result.warnings,
       teams: responseTeams,
       assignments: responseAssignments,
