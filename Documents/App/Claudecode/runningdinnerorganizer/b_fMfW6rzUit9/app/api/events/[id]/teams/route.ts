@@ -148,8 +148,10 @@ export async function DELETE(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
+    const admin = createAdminClient()
+
     // 1. Delete course_assignments first (references teams)
-    const { error: caError } = await supabase
+    const { error: caError } = await admin
       .from('course_assignments')
       .delete()
       .eq('dinner_id', id)
@@ -159,7 +161,7 @@ export async function DELETE(
     }
 
     // 2. Reset participants.team_id → NULL
-    const { error: participantsError } = await supabase
+    const { error: participantsError } = await admin
       .from('participants')
       .update({ team_id: null })
       .eq('dinner_id', id)
@@ -172,7 +174,7 @@ export async function DELETE(
     }
 
     // 3. Delete teams
-    const { error: teamsError } = await supabase
+    const { error: teamsError } = await admin
       .from('teams')
       .delete()
       .eq('dinner_id', id)
@@ -182,7 +184,7 @@ export async function DELETE(
     }
 
     // 4. Reset dinner status
-    const { error: statusError } = await supabase
+    const { error: statusError } = await admin
       .from('running_dinners')
       .update({ status: 'registration_closed' })
       .eq('id', id)

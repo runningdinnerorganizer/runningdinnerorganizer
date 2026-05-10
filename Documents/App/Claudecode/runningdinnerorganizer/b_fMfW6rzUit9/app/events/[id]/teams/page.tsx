@@ -129,10 +129,10 @@ export default function TeamsPage() {
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Failed to generate teams')
-      setTeams(data.teams ?? [])
-      setAssignments(data.assignments ?? [])
       setWaitlisted(data.waitlisted ?? [])
       setGenerateStats(data.stats ?? null)
+      // Reload teams from GET endpoint so member objects are fully populated
+      await fetchTeams()
     } catch (err) {
       setGenerateError(err instanceof Error ? err.message : 'Failed to generate teams')
     } finally {

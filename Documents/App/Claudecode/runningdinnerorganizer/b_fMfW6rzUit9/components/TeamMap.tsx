@@ -92,7 +92,7 @@ export default function TeamMap({ teams, onPinMove }: TeamMapProps) {
       // Default center: Matrimandir, Auroville (Tamil Nadu, India) when no coords available
       const defaultCenter: [number, number] = teamsWithCoords.length > 0
         ? [teamsWithCoords[0].hostLat!, teamsWithCoords[0].hostLng!]
-        : [11.9344, 79.8115]
+        : [12.00698, 79.81060]
 
       const map = L.map(container).setView(defaultCenter, teamsWithCoords.length > 0 ? 13 : 14)
       mapRef.current = map

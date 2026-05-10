@@ -62,6 +62,13 @@ const EMAIL_TEMPLATES: EmailTemplate[] = [
     subject: '⏰ Tomorrow is the big day — {{eventTitle}} is almost here!',
     body: `Hey {{firstName}}! 🌟\n\nJust one more sleep — {{eventTitle}} is TOMORROW!\n\nHere's your schedule one more time:\n\n🥗 Appetizer at {{appetizerTime}}\n{{appetizerHostNames}} — {{appetizerAddress}}\n📞 {{appetizerHostPhone}} / {{appetizerHostPhone2}}\n\n🍝 Main Course at {{mainTime}}\n{{mainHostNames}} — {{mainAddress}}\n📞 {{mainHostPhone}} / {{mainHostPhone2}}\n\n🍰 Dessert at {{dessertTime}}\n{{dessertHostNames}} — {{dessertAddress}}\n📞 {{dessertHostPhone}} / {{dessertHostPhone2}}\n\nSee you at the table! 🍽️✨\n\nWarm regards,\n{{contactName}}${CONTACT_FOOTER}`,
   },
+  {
+    id: 'no_team',
+    name: 'No Team — Waitlist',
+    type: 'no_team',
+    subject: '😔 Unfortunately no spot for {{eventTitle}} this round',
+    body: `Hey {{firstName}},\n\nThank you so much for signing up for "{{eventTitle}}" — we really appreciate your enthusiasm!\n\nUnfortunately, the number of participants for this event must be a multiple of 6 so that everyone can enjoy the full Running Dinner experience. With the current registrations, we were not able to assign you to a team for this round.\n\nYou are on our waitlist! As soon as a few more people sign up, you will be included and we will let you know straight away.\n\nWe are sorry for the inconvenience and hope to see you at a future Running Dinner very soon!\n\nWarm regards,\n{{contactName}}${CONTACT_FOOTER}`,
+  },
 ]
 
 // ---------------------------------------------------------------------------
@@ -173,6 +180,14 @@ export default function EmailsPage() {
     setSelectedTemplate(template)
     setEditedSubject(template.subject)
     setEditedBody(template.body)
+    // Auto-pre-select recipients based on template type
+    if (template.type === 'team_info' || template.type === 'route' || template.type === 'reminder') {
+      setSelectedRecipients(participants.filter(p => p.teamId))
+    } else if (template.type === 'no_team') {
+      setSelectedRecipients(participants.filter(p => !p.teamId))
+    } else {
+      setSelectedRecipients([...participants])
+    }
     setCurrentStep(2)
   }
 
@@ -352,12 +367,16 @@ export default function EmailsPage() {
   // ---------------------------------------------------------------------------
   // Render: email type badge color helper
   // ---------------------------------------------------------------------------
-  const typeVariant: Record<string, 'default' | 'secondary' | 'outline'> = {
+  const typeVariant: Record<string, 'default' | 'secondary' | 'outline' | 'destructive'> = {
     welcome: 'default',
     team_info: 'secondary',
     route: 'outline',
     reminder: 'outline',
+    no_team: 'destructive',
   }
+
+  // Which template types have at least one sent email log
+  const sentEmailTypes = new Set(emailLogs.map(l => l.emailType))
 
   // Group logs by batch: same emailType + same minute
   // Show flat list ordered by date desc
@@ -530,8 +549,18 @@ export default function EmailsPage() {
                   const renderedSubject = renderPreview(template.subject, event)
                   const renderedBody = renderPreview(template.body, event)
 
+                  const wasSent = sentEmailTypes.has(template.id)
+
                   return (
-                    <Card key={template.id} className="overflow-hidden">
+                    <div key={template.id}>
+                      {template.id === 'welcome' && (
+                        <p className="mb-1 flex items-center gap-1.5 text-xs font-medium text-blue-600">
+                          <Mail className="h-3 w-3" />
+                          Automatically sent when someone registers
+                        </p>
+                      )}
+                    <Card className={cn("overflow-hidden", wasSent && "border-green-300")}>
+                      {wasSent && <div className="h-1 bg-green-400" />}
                       {/* Header — always visible */}
                       <div
                         className="flex cursor-pointer items-center gap-3 px-4 py-3 hover:bg-muted/50 transition-colors"
@@ -539,10 +568,17 @@ export default function EmailsPage() {
                         role="button"
                         aria-expanded={isExpanded}
                       >
-                        <Mail className="h-4 w-4 shrink-0 text-muted-foreground" />
+                        <Mail className={cn("h-4 w-4 shrink-0", wasSent ? "text-green-500" : "text-muted-foreground")} />
 
                         <div className="flex-1 min-w-0">
-                          <p className="font-medium text-sm">{template.name}</p>
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium text-sm">{template.name}</p>
+                            {wasSent && (
+                              <span className="flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
+                                <CheckCircle2 className="h-3 w-3" /> Sent
+                              </span>
+                            )}
+                          </div>
                           <p className="text-xs text-muted-foreground truncate">{renderedSubject}</p>
                         </div>
 
@@ -588,6 +624,7 @@ export default function EmailsPage() {
                         </div>
                       )}
                     </Card>
+                    </div>
                   )
                 })}
               </div>
@@ -640,10 +677,15 @@ export default function EmailsPage() {
                           </TableCell>
                           <TableCell>
                             <Badge
-                              variant={batch.status === 'sent' ? 'default' : 'secondary'}
-                              className="text-xs"
+                              variant="outline"
+                              className={cn(
+                                "text-xs",
+                                batch.status === 'sent'
+                                  ? "border-green-300 bg-green-100 text-green-700"
+                                  : "border-red-300 bg-red-50 text-red-700"
+                              )}
                             >
-                              {batch.status}
+                              {batch.status === 'sent' ? '✓ sent' : batch.status}
                             </Badge>
                           </TableCell>
                         </TableRow>
