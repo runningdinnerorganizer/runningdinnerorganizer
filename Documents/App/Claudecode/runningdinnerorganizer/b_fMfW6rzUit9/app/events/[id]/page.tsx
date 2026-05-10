@@ -340,6 +340,12 @@ export default function EventDetailPage() {
                 </div>
                 <p className="text-3xl font-bold text-blue-600">{participantCount}</p>
                 <p className="text-sm text-blue-700">Participants</p>
+                {participantCount > 0 && (() => {
+                  const missing = participantCount % 6 === 0 ? 0 : 6 - (participantCount % 6)
+                  return missing === 0
+                    ? <p className="mt-1 text-xs font-medium text-emerald-600">✓ Ready for teams</p>
+                    : <p className="mt-1 text-xs text-orange-500">{missing} more for next round</p>
+                })()}
               </CardContent>
             </Card>
           </Link>

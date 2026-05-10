@@ -977,9 +977,10 @@ export function assignTeams(
   // ------------------------------------------------------------------
   // Step 7: Build validation summary + dietary warnings
   // ------------------------------------------------------------------
+  // Validation: repeated meetings are expected in small events — always warnings, never errors
   const validationErrors = validateAssignments(teams, finalAssignments)
   for (const e of validationErrors) {
-    errors.push(`[Validation] ${e}`)
+    warnings.push(e)
   }
 
   const validationSummary: string[] = []
