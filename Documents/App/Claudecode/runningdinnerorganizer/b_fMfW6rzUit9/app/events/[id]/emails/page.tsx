@@ -52,14 +52,14 @@ const EMAIL_TEMPLATES: EmailTemplate[] = [
     name: 'Dinner Route',
     type: 'route',
     subject: '🗺️ Your dinner route for {{eventTitle}}!',
-    body: `Hey {{firstName}}! 🚀\n\nYour personal dinner route for "{{eventTitle}}" on {{date}} is ready!\n\nHere's where your evening will take you:\n\n🥗 APPETIZER — {{appetizerTime}}\nHosts: {{appetizerHostNames}}\n📍 {{appetizerAddress}}\n📞 {{appetizerHostPhone}} / {{appetizerHostPhone2}}\n\n🍝 MAIN COURSE — {{mainTime}}\nHosts: {{mainHostNames}}\n📍 {{mainAddress}}\n📞 {{mainHostPhone}} / {{mainHostPhone2}}\n\n🍰 DESSERT — {{dessertTime}}\nHosts: {{dessertHostNames}}\n📍 {{dessertAddress}}\n📞 {{dessertHostPhone}} / {{dessertHostPhone2}}\n\n💡 A few tips:\n→ Arrive on time — your hosts have prepared everything for you!\n→ If you're running late, give your hosts a quick call.\n→ Most importantly: be open, be curious, and enjoy every bite!\n\nHave a wonderful evening! 🥂\n\nWarm regards,\n{{contactName}}${CONTACT_FOOTER}`,
+    body: `Hey {{firstName}}! 🚀\n\nYour personal dinner route for "{{eventTitle}}" on {{date}} is ready!\n\nHere's where your evening will take you:\n\n🥗 APPETIZER — {{appetizerTime}}\nHosts: {{appetizerHostNames}}\n📍 {{appetizerAddress}}\n🗺️ {{appetizerMapLink}}\n📞 {{appetizerHostPhone}} / {{appetizerHostPhone2}}\n\n🍝 MAIN COURSE — {{mainTime}}\nHosts: {{mainHostNames}}\n📍 {{mainAddress}}\n🗺️ {{mainMapLink}}\n📞 {{mainHostPhone}} / {{mainHostPhone2}}\n\n🍰 DESSERT — {{dessertTime}}\nHosts: {{dessertHostNames}}\n📍 {{dessertAddress}}\n🗺️ {{dessertMapLink}}\n📞 {{dessertHostPhone}} / {{dessertHostPhone2}}\n\n💡 A few tips:\n→ Arrive on time — your hosts have prepared everything for you!\n→ If you're running late, give your hosts a quick call.\n→ Most importantly: be open, be curious, and enjoy every bite!\n\nHave a wonderful evening! 🥂\n\nWarm regards,\n{{contactName}}${CONTACT_FOOTER}`,
   },
   {
     id: 'reminder',
     name: 'Event Reminder',
     type: 'reminder',
     subject: '⏰ Tomorrow is the big day — {{eventTitle}} is almost here!',
-    body: `Hey {{firstName}}! 🌟\n\nJust one more sleep — {{eventTitle}} is TOMORROW!\n\nHere's your schedule one more time:\n\n🥗 Appetizer at {{appetizerTime}}\n{{appetizerHostNames}} — {{appetizerAddress}}\n📞 {{appetizerHostPhone}} / {{appetizerHostPhone2}}\n\n🍝 Main Course at {{mainTime}}\n{{mainHostNames}} — {{mainAddress}}\n📞 {{mainHostPhone}} / {{mainHostPhone2}}\n\n🍰 Dessert at {{dessertTime}}\n{{dessertHostNames}} — {{dessertAddress}}\n📞 {{dessertHostPhone}} / {{dessertHostPhone2}}\n\nSee you at the table! 🍽️✨\n\nWarm regards,\n{{contactName}}${CONTACT_FOOTER}`,
+    body: `Hey {{firstName}}! 🌟\n\nJust one more sleep — {{eventTitle}} is TOMORROW!\n\nHere's your schedule one more time:\n\n🥗 Appetizer at {{appetizerTime}}\n{{appetizerHostNames}} — {{appetizerAddress}}\n🗺️ {{appetizerMapLink}}\n📞 {{appetizerHostPhone}} / {{appetizerHostPhone2}}\n\n🍝 Main Course at {{mainTime}}\n{{mainHostNames}} — {{mainAddress}}\n🗺️ {{mainMapLink}}\n📞 {{mainHostPhone}} / {{mainHostPhone2}}\n\n🍰 Dessert at {{dessertTime}}\n{{dessertHostNames}} — {{dessertAddress}}\n🗺️ {{dessertMapLink}}\n📞 {{dessertHostPhone}} / {{dessertHostPhone2}}\n\nSee you at the table! 🍽️✨\n\nWarm regards,\n{{contactName}}${CONTACT_FOOTER}`,
   },
   {
     id: 'no_team',
@@ -266,6 +266,9 @@ export default function EmailsPage() {
       .replace(/\{\{dessertAddress\}\}/g, participants[4]?.address || 'Gartenweg 9, Berlin')
       .replace(/\{\{dessertHostPhone\}\}/g, participants[4]?.phone || '—')
       .replace(/\{\{dessertHostPhone2\}\}/g, participants[5]?.phone || '—')
+      .replace(/\{\{appetizerMapLink\}\}/g, 'https://www.google.com/maps?q=12.0049,79.8108')
+      .replace(/\{\{mainMapLink\}\}/g, 'https://www.google.com/maps?q=12.0012,79.8095')
+      .replace(/\{\{dessertMapLink\}\}/g, 'https://www.google.com/maps?q=12.0078,79.8132')
   }
 
   async function handleSendToSelf(template: EmailTemplate) {

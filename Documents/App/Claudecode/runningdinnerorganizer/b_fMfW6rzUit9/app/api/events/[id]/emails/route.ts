@@ -135,7 +135,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
 
     if (needsTeamData && !sendToSelf) {
       const [{ data: allTeams }, { data: allAssignments }, { data: allParticipants }] = await Promise.all([
-        adminClient.from('teams').select('id, hosting_course, host_address, member1_id, member2_id').eq('dinner_id', id),
+        adminClient.from('teams').select('id, hosting_course, host_address, host_lat, host_lng, member1_id, member2_id').eq('dinner_id', id),
         adminClient.from('course_assignments').select('course, host_team_id, guest_team1_id, guest_team2_id').eq('dinner_id', id),
         adminClient.from('participants').select('id, first_name, last_name, email, phone, dietary_restrictions').eq('dinner_id', id),
       ])
@@ -198,6 +198,14 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
               vars[`${course}Address`] = hostTeam?.host_address ?? '—'
               vars[`${course}HostPhone`] = hm1?.phone ?? '—'
               vars[`${course}HostPhone2`] = hm2?.phone ?? '—'
+              // Google Maps link — prefer exact pin coordinates, fall back to address search
+              if (hostTeam?.host_lat != null && hostTeam?.host_lng != null) {
+                vars[`${course}MapLink`] = `https://www.google.com/maps?q=${hostTeam.host_lat},${hostTeam.host_lng}`
+              } else if (hostTeam?.host_address) {
+                vars[`${course}MapLink`] = `https://www.google.com/maps/search/${encodeURIComponent(hostTeam.host_address)}`
+              } else {
+                vars[`${course}MapLink`] = '—'
+              }
             }
           }
         }
