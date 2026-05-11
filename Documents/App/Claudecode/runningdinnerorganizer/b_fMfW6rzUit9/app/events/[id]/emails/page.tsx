@@ -9,7 +9,6 @@ import { TemplateSelector } from '@/components/emails/template-selector'
 import { TemplateEditor } from '@/components/emails/template-editor'
 import { RecipientSelector } from '@/components/emails/recipient-selector'
 import { EmailPreview } from '@/components/emails/email-preview'
-import { SendProgress } from '@/components/emails/send-progress'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -24,7 +23,7 @@ import {
 import type { EmailTemplate } from '@/components/emails/template-selector'
 import type { RealParticipant } from '@/components/emails/recipient-selector'
 import type { RealEvent } from '@/components/emails/email-preview'
-import { ArrowLeft, ArrowRight, Send, Mail, FileText, Users, Eye, Inbox, ChevronDown, ChevronUp, CheckCircle2 } from 'lucide-react'
+import { Send, Mail, FileText, Users, Eye, Inbox, ChevronDown, ChevronUp, CheckCircle2, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { format } from 'date-fns'
 
@@ -87,13 +86,6 @@ interface EmailLog {
   createdAt: string
 }
 
-const steps = [
-  { id: 1, name: 'Select Template', icon: FileText },
-  { id: 2, name: 'Edit Content', icon: Mail },
-  { id: 3, name: 'Choose Recipients', icon: Users },
-  { id: 4, name: 'Preview & Send', icon: Eye },
-]
-
 // ---------------------------------------------------------------------------
 // Page
 // ---------------------------------------------------------------------------
@@ -108,8 +100,7 @@ export default function EmailsPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  // Wizard state
-  const [currentStep, setCurrentStep] = useState(1)
+  // Compose state
   const [selectedTemplate, setSelectedTemplate] = useState<EmailTemplate | null>(null)
   const [editedSubject, setEditedSubject] = useState('')
   const [editedBody, setEditedBody] = useState('')
@@ -180,6 +171,8 @@ export default function EmailsPage() {
     setSelectedTemplate(template)
     setEditedSubject(template.subject)
     setEditedBody(template.body)
+    setSendComplete(false)
+    setSendError(null)
     // Auto-pre-select recipients based on template type
     if (template.type === 'team_info' || template.type === 'route' || template.type === 'reminder') {
       setSelectedRecipients(participants.filter(p => p.teamId))
@@ -188,15 +181,6 @@ export default function EmailsPage() {
     } else {
       setSelectedRecipients([...participants])
     }
-    setCurrentStep(2)
-  }
-
-  const handleNext = () => {
-    if (currentStep < steps.length) setCurrentStep(currentStep + 1)
-  }
-
-  const handleBack = () => {
-    if (currentStep > 1) setCurrentStep(currentStep - 1)
   }
 
   const handleSend = async () => {
@@ -230,23 +214,12 @@ export default function EmailsPage() {
   }
 
   const handleReset = () => {
-    setCurrentStep(1)
     setSelectedTemplate(null)
     setEditedSubject('')
     setEditedBody('')
     setSelectedRecipients([])
     setSendComplete(false)
     setSendError(null)
-  }
-
-  const isStepValid = () => {
-    switch (currentStep) {
-      case 1: return selectedTemplate !== null
-      case 2: return editedSubject.trim() !== '' && editedBody.trim() !== ''
-      case 3: return selectedRecipients.length > 0
-      case 4: return true
-      default: return false
-    }
   }
 
   // ---------------------------------------------------------------------------
@@ -319,7 +292,7 @@ export default function EmailsPage() {
       <div className="flex min-h-screen flex-col">
         <Header />
         <div className="flex flex-1 items-center justify-center">
-          <p className="text-muted-foreground">Loading...</p>
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
       </div>
     )
@@ -343,29 +316,7 @@ export default function EmailsPage() {
   }
 
   // ---------------------------------------------------------------------------
-  // Render: sending / done overlay
-  // ---------------------------------------------------------------------------
-  if (isSending || sendComplete) {
-    return (
-      <div className="flex min-h-screen flex-col">
-        <Header />
-        <div className="flex flex-1">
-          <Sidebar eventId={eventId} />
-          <main className="flex flex-1 items-center justify-center px-4 py-8">
-            <SendProgress
-              isSending={isSending}
-              sendComplete={sendComplete}
-              recipientCount={selectedRecipients.length}
-              onReset={handleReset}
-            />
-          </main>
-        </div>
-      </div>
-    )
-  }
-
-  // ---------------------------------------------------------------------------
-  // Render: email type badge color helper
+  // Render helpers
   // ---------------------------------------------------------------------------
   const typeVariant: Record<string, 'default' | 'secondary' | 'outline' | 'destructive'> = {
     welcome: 'default',
@@ -375,11 +326,8 @@ export default function EmailsPage() {
     no_team: 'destructive',
   }
 
-  // Which template types have at least one sent email log
   const sentEmailTypes = new Set(emailLogs.map(l => l.emailType))
 
-  // Group logs by batch: same emailType + same minute
-  // Show flat list ordered by date desc
   const uniqueSentBatches = emailLogs.reduce<{ key: string; type: string; subject: string; count: number; status: string; sentAt: string }[]>((acc, log) => {
     const minute = log.sentAt ? log.sentAt.slice(0, 16) : log.createdAt.slice(0, 16)
     const key = `${log.emailType}-${minute}`
@@ -392,8 +340,10 @@ export default function EmailsPage() {
     return acc
   }, [])
 
+  const canSend = selectedTemplate && editedSubject.trim() && editedBody.trim() && selectedRecipients.length > 0
+
   // ---------------------------------------------------------------------------
-  // Main render
+  // Main render — single scrollable page
   // ---------------------------------------------------------------------------
   return (
     <div className="flex min-h-screen flex-col">
@@ -403,7 +353,7 @@ export default function EmailsPage() {
         <Sidebar eventId={eventId} />
 
         <main className="flex-1 px-4 py-8 lg:px-8">
-          <div className="mx-auto max-w-4xl space-y-10">
+          <div className="mx-auto max-w-4xl space-y-8">
 
             {/* Page Header */}
             <div>
@@ -413,124 +363,110 @@ export default function EmailsPage() {
               </p>
             </div>
 
-            {/* ----------------------------------------------------------------
-                Wizard
-            ---------------------------------------------------------------- */}
-
-            {/* Progress Steps */}
-            <nav aria-label="Progress">
-              <ol className="flex items-center justify-between">
-                {steps.map((step, index) => {
-                  const Icon = step.icon
-                  return (
-                    <li key={step.id} className="flex flex-1 items-center">
-                      <div className="flex flex-col items-center">
-                        <div
-                          className={cn(
-                            "flex h-10 w-10 items-center justify-center rounded-full border-2 transition-colors",
-                            currentStep > step.id
-                              ? "border-primary bg-primary text-primary-foreground"
-                              : currentStep === step.id
-                              ? "border-primary bg-primary/10 text-primary"
-                              : "border-muted-foreground/30 bg-muted text-muted-foreground"
-                          )}
-                        >
-                          <Icon className="h-5 w-5" />
-                        </div>
-                        <span className={cn(
-                          "mt-2 text-xs font-medium",
-                          currentStep >= step.id ? "text-foreground" : "text-muted-foreground"
-                        )}>
-                          {step.name}
-                        </span>
-                      </div>
-                      {index !== steps.length - 1 && (
-                        <div
-                          className={cn(
-                            "h-0.5 flex-1",
-                            currentStep > step.id ? "bg-primary" : "bg-muted-foreground/30"
-                          )}
-                        />
-                      )}
-                    </li>
-                  )
-                })}
-              </ol>
-            </nav>
-
-            {/* Step Content */}
+            {/* ---- Section 1: Template ---- */}
             <Card>
               <CardHeader>
-                <CardTitle>{steps[currentStep - 1].name}</CardTitle>
-                <CardDescription>
-                  {currentStep === 1 && 'Choose a template for your email'}
-                  {currentStep === 2 && 'Customize the email content'}
-                  {currentStep === 3 && 'Select who should receive this email'}
-                  {currentStep === 4 && 'Review and send your email'}
-                </CardDescription>
+                <CardTitle className="flex items-center gap-2"><FileText className="h-5 w-5" /> 1. Choose Template</CardTitle>
+                <CardDescription>Select the type of email you want to send</CardDescription>
               </CardHeader>
               <CardContent>
-                {currentStep === 1 && (
-                  <TemplateSelector
-                    templates={EMAIL_TEMPLATES}
-                    selectedTemplate={selectedTemplate}
-                    onSelect={handleSelectTemplate}
-                  />
-                )}
-                {currentStep === 2 && (
-                  <TemplateEditor
-                    subject={editedSubject}
-                    body={editedBody}
-                    onSubjectChange={setEditedSubject}
-                    onBodyChange={setEditedBody}
-                  />
-                )}
-                {currentStep === 3 && (
-                  <RecipientSelector
-                    participants={participants}
-                    selectedRecipients={selectedRecipients}
-                    onSelectionChange={setSelectedRecipients}
-                  />
-                )}
-                {currentStep === 4 && selectedTemplate && (
-                  <EmailPreview
-                    subject={editedSubject}
-                    body={editedBody}
-                    recipientCount={selectedRecipients.length}
-                    sampleRecipient={selectedRecipients[0]}
-                    event={event}
-                  />
-                )}
+                <TemplateSelector
+                  templates={EMAIL_TEMPLATES}
+                  selectedTemplate={selectedTemplate}
+                  onSelect={handleSelectTemplate}
+                />
               </CardContent>
             </Card>
 
-            {sendError && (
-              <p className="text-sm text-destructive">{sendError}</p>
+            {selectedTemplate && (
+              <>
+                {/* ---- Section 2: Edit Content ---- */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2"><Mail className="h-5 w-5" /> 2. Customize Content</CardTitle>
+                    <CardDescription>Edit the subject and body — placeholders like {'{{firstName}}'} will be replaced automatically</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <TemplateEditor
+                      subject={editedSubject}
+                      body={editedBody}
+                      onSubjectChange={setEditedSubject}
+                      onBodyChange={setEditedBody}
+                    />
+                  </CardContent>
+                </Card>
+
+                {/* ---- Section 3: Recipients ---- */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2"><Users className="h-5 w-5" /> 3. Choose Recipients</CardTitle>
+                    <CardDescription>
+                      {selectedTemplate.type === 'team_info' || selectedTemplate.type === 'route' || selectedTemplate.type === 'reminder'
+                        ? 'Pre-selected: all participants with a team assigned'
+                        : selectedTemplate.type === 'no_team'
+                        ? 'Pre-selected: participants without a team (waitlisted)'
+                        : 'Pre-selected: all participants'}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <RecipientSelector
+                      participants={participants}
+                      selectedRecipients={selectedRecipients}
+                      onSelectionChange={setSelectedRecipients}
+                    />
+                  </CardContent>
+                </Card>
+
+                {/* ---- Section 4: Preview & Send ---- */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2"><Eye className="h-5 w-5" /> 4. Preview & Send</CardTitle>
+                    <CardDescription>Review how the email will look, then send</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    <EmailPreview
+                      subject={editedSubject}
+                      body={editedBody}
+                      recipientCount={selectedRecipients.length}
+                      sampleRecipient={selectedRecipients[0]}
+                      event={event}
+                    />
+
+                    {sendComplete && (
+                      <div className="flex items-center gap-3 rounded-xl border border-green-300 bg-green-50 px-4 py-3">
+                        <CheckCircle2 className="h-5 w-5 shrink-0 text-green-600" />
+                        <div>
+                          <p className="font-medium text-green-800">Emails sent successfully!</p>
+                          <p className="text-sm text-green-700">{selectedRecipients.length} recipient{selectedRecipients.length !== 1 ? 's' : ''} received this email.</p>
+                        </div>
+                        <Button variant="outline" size="sm" className="ml-auto" onClick={handleReset}>
+                          Send another
+                        </Button>
+                      </div>
+                    )}
+
+                    {sendError && (
+                      <p className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{sendError}</p>
+                    )}
+
+                    {!sendComplete && (
+                      <Button
+                        onClick={handleSend}
+                        disabled={!canSend || isSending}
+                        className="w-full gap-2"
+                        size="lg"
+                      >
+                        {isSending ? (
+                          <><Loader2 className="h-4 w-4 animate-spin" /> Sending…</>
+                        ) : (
+                          <><Send className="h-4 w-4" /> Send to {selectedRecipients.length} Recipient{selectedRecipients.length !== 1 ? 's' : ''}</>
+                        )}
+                      </Button>
+                    )}
+                  </CardContent>
+                </Card>
+              </>
             )}
-
-            {/* Navigation Buttons */}
-            <div className="flex justify-between">
-              <Button
-                variant="outline"
-                onClick={handleBack}
-                disabled={currentStep === 1}
-              >
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Back
-              </Button>
-
-              {currentStep < steps.length ? (
-                <Button onClick={handleNext} disabled={!isStepValid()}>
-                  Next
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-              ) : (
-                <Button onClick={handleSend} disabled={!isStepValid()}>
-                  <Send className="mr-2 h-4 w-4" />
-                  Send {selectedRecipients.length} Emails
-                </Button>
-              )}
-            </div>
 
             {/* ----------------------------------------------------------------
                 Email Previews
@@ -641,7 +577,7 @@ export default function EmailsPage() {
                   <Inbox className="mb-3 h-10 w-10 text-muted-foreground" />
                   <p className="font-medium text-muted-foreground">No emails sent yet</p>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    Use the wizard above to send your first email.
+                    Choose a template above and send your first email.
                   </p>
                 </div>
               ) : (
