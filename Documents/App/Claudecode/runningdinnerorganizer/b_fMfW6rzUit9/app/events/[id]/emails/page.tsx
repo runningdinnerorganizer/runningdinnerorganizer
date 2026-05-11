@@ -30,7 +30,7 @@ import { format } from 'date-fns'
 // ---------------------------------------------------------------------------
 // Hardcoded email templates (no DB table)
 // ---------------------------------------------------------------------------
-const CONTACT_FOOTER = `\n\n---\nQuestions? Reach out to {{contactName}}:\n✉️ {{contactEmail}}\n📞 {{contactPhone}}\n\nFeedback about this platform → lukasweick@gmail.com`
+const CONTACT_FOOTER = `\n\n---\nQuestions? Reach out to {{contactName}}:\n✉️ {{contactEmail}}\n📞 {{contactPhone}}`
 
 const EMAIL_TEMPLATES: EmailTemplate[] = [
   {
