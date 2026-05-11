@@ -15,7 +15,7 @@ export default function LocationPickerMap({
   lat,
   lng,
   onChange,
-  defaultCenter = [11.9344, 79.8195],
+  defaultCenter = [12.0049, 79.8108],
   defaultZoom = 14,
 }: LocationPickerMapProps) {
   const mapRef = useRef<any>(null)

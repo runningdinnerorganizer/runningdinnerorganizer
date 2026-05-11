@@ -503,7 +503,7 @@ export default function JoinPage() {
               </div>
               <div className="rounded-xl bg-amber-50 p-3 text-xs text-amber-800 space-y-1">
                 <p><strong>🏠 Your role as host:</strong> Every team hosts exactly one course at home — simple and homemade is perfect!</p>
-                <p><strong>🤝 The magic:</strong> By the end of the evening you will have shared a meal with up to 10 different people from your community.</p>
+                <p><strong>🤝 The magic:</strong> By the end of the evening you will have shared a meal with up to 12 different people from your community.</p>
               </div>
             </CardContent>
           </Card>

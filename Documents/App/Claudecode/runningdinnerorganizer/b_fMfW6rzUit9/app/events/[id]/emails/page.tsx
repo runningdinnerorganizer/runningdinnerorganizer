@@ -38,7 +38,7 @@ const EMAIL_TEMPLATES: EmailTemplate[] = [
     name: 'Welcome Email',
     type: 'welcome',
     subject: '🍽️ You\'re in! Welcome to {{eventTitle}}!',
-    body: `Hey {{firstName}}! 🎉\n\nThank you for registering for the Running Dinner event "{{eventTitle}}" on {{date}} in {{city}}!\n\nGet ready for an unforgettable evening full of delicious food, great company, and a little adventure. Here's a sneak peek at the schedule:\n\n🥗 Appetizer: {{appetizerTime}}\n🍝 Main Course: {{mainTime}}\n🍰 Dessert: {{dessertTime}}\n\nRegistration deadline: {{registrationDeadline}}\n\nYour personal team assignment and dinner route will follow soon.\n\nCurious about how a Running Dinner works? Scroll down! 👇\n\nWarm regards,\n{{contactName}}${CONTACT_FOOTER}\n\n\n---------------------------------------------------\n🍽️ HOW DOES A RUNNING DINNER WORK?\n---------------------------------------------------\n\nA Running Dinner is a social dining experience where participants share a multi-course meal — but each course takes place at a different home!\n\nHere's how your evening will unfold:\n\n1️⃣ APPETIZER\nYou start the evening at your first hosts' home together with one other couple. Enjoy the starter, get to know your fellow guests, and warm up for the night ahead.\n\n2️⃣ MAIN COURSE\nAfter appetizers, everyone moves on — you'll head to a completely different home with a brand new group of people. Fresh conversations, new faces, and a delicious main dish await.\n\n3️⃣ DESSERT\nFor the grand finale, you move once more to yet another home for dessert. By this point you'll have met a whole new circle of people from your community!\n\n🏠 YOUR ROLE AS HOST\nEvery team hosts exactly one course at their own home — so you'll be a guest for two courses and a host for one. As a host, you prepare and serve one dish for 6 people (including yourself). Simple and homemade is absolutely perfect!\n\n🤝 THE MAGIC OF IT\nBy the end of the evening, you will have shared a meal with up to 10 different people — all from your neighbourhood or community. A wonderful way to connect, discover new homes, and make lasting friendships.\n\nYou'll receive your exact route closer to the event. Until then — start thinking about what you'd like to cook! 🍳`,
+    body: `Hey {{firstName}}! 🎉\n\nThank you for registering for the Running Dinner event "{{eventTitle}}" on {{date}} in {{city}}!\n\nGet ready for an unforgettable evening full of delicious food, great company, and a little adventure. Here's a sneak peek at the schedule:\n\n🥗 Appetizer: {{appetizerTime}}\n🍝 Main Course: {{mainTime}}\n🍰 Dessert: {{dessertTime}}\n\nRegistration deadline: {{registrationDeadline}}\n\nYour personal team assignment and dinner route will follow soon.\n\nCurious about how a Running Dinner works? Scroll down! 👇\n\nWarm regards,\n{{contactName}}${CONTACT_FOOTER}\n\n\n---------------------------------------------------\n🍽️ HOW DOES A RUNNING DINNER WORK?\n---------------------------------------------------\n\nA Running Dinner is a social dining experience where participants share a multi-course meal — but each course takes place at a different home!\n\nHere's how your evening will unfold:\n\n1️⃣ APPETIZER\nYou start the evening at your first hosts' home together with one other couple. Enjoy the starter, get to know your fellow guests, and warm up for the night ahead.\n\n2️⃣ MAIN COURSE\nAfter appetizers, everyone moves on — you'll head to a completely different home with a brand new group of people. Fresh conversations, new faces, and a delicious main dish await.\n\n3️⃣ DESSERT\nFor the grand finale, you move once more to yet another home for dessert. By this point you'll have met a whole new circle of people from your community!\n\n🏠 YOUR ROLE AS HOST\nEvery team hosts exactly one course at their own home — so you'll be a guest for two courses and a host for one. As a host, you prepare and serve one dish for 6 people (including yourself). Simple and homemade is absolutely perfect!\n\n🤝 THE MAGIC OF IT\nBy the end of the evening, you will have shared a meal with up to 12 different people — all from your neighbourhood or community. A wonderful way to connect, discover new homes, and make lasting friendships.\n\nYou'll receive your exact route closer to the event. Until then — start thinking about what you'd like to cook! 🍳`,
   },
   {
     id: 'team_info',
@@ -223,41 +223,49 @@ export default function EmailsPage() {
   }
 
   // ---------------------------------------------------------------------------
-  // Preview helper — replaces template placeholders with example / real data
+  // Preview helper — replaces template placeholders with real participant data
   // ---------------------------------------------------------------------------
-  function renderPreview(body: string, evt: RealEvent | null): string {
+  function renderPreview(body: string, evt: RealEvent | null, participant?: RealParticipant): string {
     if (!evt) return body
+    const firstName = participant?.firstName || participants[0]?.firstName || 'Max'
+    const lastName = participant?.lastName || participants[0]?.lastName || 'Mustermann'
+    const email = participant?.email || participants[0]?.email || 'participant@example.com'
+    const address = participant?.address || participants[0]?.address || 'Musterstraße 1, 12345 Berlin'
+    const phone = participant?.phone || participants[0]?.phone || '—'
+
     return body
-      .replace(/\{\{firstName\}\}/g, 'Max')
+      .replace(/\{\{firstName\}\}/g, firstName)
+      .replace(/\{\{lastName\}\}/g, lastName)
+      .replace(/\{\{email\}\}/g, email)
       .replace(/\{\{eventTitle\}\}/g, evt.publicTitle || evt.title)
       .replace(/\{\{date\}\}/g, evt.date ? new Date(evt.date).toLocaleDateString('en-GB') : '—')
       .replace(/\{\{city\}\}/g, evt.city || '—')
-      .replace(/\{\{appetizerTime\}\}/g, (evt.appetizerTime || '19:00').slice(0, 5))
-      .replace(/\{\{mainTime\}\}/g, (evt.mainTime || '20:00').slice(0, 5))
-      .replace(/\{\{dessertTime\}\}/g, (evt.dessertTime || '21:00').slice(0, 5))
-      .replace(/\{\{registrationDeadline\}\}/g, evt.registrationDeadline ? new Date(evt.registrationDeadline).toLocaleDateString('en-GB') : '—')
+      .replace(/\{\{appetizerTime\}\}/g, (evt.appetizerTime || '18:00').slice(0, 5))
+      .replace(/\{\{mainTime\}\}/g, (evt.mainTime || '19:00').slice(0, 5))
+      .replace(/\{\{dessertTime\}\}/g, (evt.dessertTime || '20:00').slice(0, 5))
+      .replace(/\{\{registrationDeadline\}\}/g, (evt as unknown as Record<string, string>).registrationDeadline ? new Date((evt as unknown as Record<string, string>).registrationDeadline).toLocaleDateString('en-GB') : '—')
       .replace(/\{\{contactName\}\}/g, evt.contactName || '—')
       .replace(/\{\{contactEmail\}\}/g, evt.contactEmail || '—')
       .replace(/\{\{contactPhone\}\}/g, evt.contactPhone || '—')
-      .replace(/\{\{partnerName\}\}/g, 'Anna Müller')
-      .replace(/\{\{partnerEmail\}\}/g, 'anna.mueller@example.com')
-      .replace(/\{\{partnerPhone\}\}/g, '+49 151 99887766')
+      .replace(/\{\{partnerName\}\}/g, participants[1] ? `${participants[1].firstName} ${participants[1].lastName}` : 'Your Partner')
+      .replace(/\{\{partnerEmail\}\}/g, participants[1]?.email || 'partner@example.com')
+      .replace(/\{\{partnerPhone\}\}/g, participants[1]?.phone || '—')
       .replace(/\{\{hostingCourse\}\}/g, 'Appetizer')
-      .replace(/\{\{hostingTime\}\}/g, (evt.appetizerTime || '19:00').slice(0, 5))
-      .replace(/\{\{hostingAddress\}\}/g, 'Musterstraße 1, 12345 Berlin')
-      .replace(/\{\{dietaryNotes\}\}/g, 'Guest 1: Vegetarian\nGuest 2: Gluten-free')
-      .replace(/\{\{appetizerHostNames\}\}/g, 'Lisa & Tom Müller')
-      .replace(/\{\{appetizerAddress\}\}/g, 'Musterstraße 1, 12345 Berlin')
-      .replace(/\{\{appetizerHostPhone\}\}/g, '+49 151 12345678')
-      .replace(/\{\{appetizerHostPhone2\}\}/g, '+49 151 87654321')
-      .replace(/\{\{mainHostNames\}\}/g, 'Julia & Peter Schmidt')
-      .replace(/\{\{mainAddress\}\}/g, 'Beispielweg 5, 12345 Berlin')
-      .replace(/\{\{mainHostPhone\}\}/g, '+49 152 87654321')
-      .replace(/\{\{mainHostPhone2\}\}/g, '+49 152 11223344')
-      .replace(/\{\{dessertHostNames\}\}/g, 'Sara & Klaus Weber')
-      .replace(/\{\{dessertAddress\}\}/g, 'Testgasse 9, 12345 Berlin')
-      .replace(/\{\{dessertHostPhone\}\}/g, '+49 160 11223344')
-      .replace(/\{\{dessertHostPhone2\}\}/g, '+49 160 55667788')
+      .replace(/\{\{hostingTime\}\}/g, (evt.appetizerTime || '18:00').slice(0, 5))
+      .replace(/\{\{hostingAddress\}\}/g, address)
+      .replace(/\{\{dietaryNotes\}\}/g, `${firstName}: ${participant?.dietaryRestrictions?.join(', ') || 'None'}`)
+      .replace(/\{\{appetizerHostNames\}\}/g, participants[0] ? `${participants[0].firstName} & ${participants[1]?.firstName || 'Partner'}` : 'Host Team A')
+      .replace(/\{\{appetizerAddress\}\}/g, participants[0]?.address || address)
+      .replace(/\{\{appetizerHostPhone\}\}/g, participants[0]?.phone || phone)
+      .replace(/\{\{appetizerHostPhone2\}\}/g, participants[1]?.phone || '—')
+      .replace(/\{\{mainHostNames\}\}/g, participants[2] ? `${participants[2].firstName} & ${participants[3]?.firstName || 'Partner'}` : 'Host Team B')
+      .replace(/\{\{mainAddress\}\}/g, participants[2]?.address || 'Hauptstraße 5, Berlin')
+      .replace(/\{\{mainHostPhone\}\}/g, participants[2]?.phone || '—')
+      .replace(/\{\{mainHostPhone2\}\}/g, participants[3]?.phone || '—')
+      .replace(/\{\{dessertHostNames\}\}/g, participants[4] ? `${participants[4].firstName} & ${participants[5]?.firstName || 'Partner'}` : 'Host Team C')
+      .replace(/\{\{dessertAddress\}\}/g, participants[4]?.address || 'Gartenweg 9, Berlin')
+      .replace(/\{\{dessertHostPhone\}\}/g, participants[4]?.phone || '—')
+      .replace(/\{\{dessertHostPhone2\}\}/g, participants[5]?.phone || '—')
   }
 
   async function handleSendToSelf(template: EmailTemplate) {
@@ -378,7 +386,75 @@ export default function EmailsPage() {
               </CardContent>
             </Card>
 
-            {selectedTemplate && (
+            {selectedTemplate && selectedTemplate.id === 'welcome' && (
+              <Card>
+                <CardContent className="pt-6 space-y-4">
+                  <div className="flex items-start gap-3 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3">
+                    <Mail className="mt-0.5 h-5 w-5 shrink-0 text-blue-500" />
+                    <div className="text-sm">
+                      <p className="font-medium text-blue-800">Automatically sent on registration</p>
+                      <p className="mt-0.5 text-blue-700">Every participant receives this email immediately when they sign up. No manual action needed.</p>
+                    </div>
+                  </div>
+
+                  {sendComplete && (
+                    <div className="flex items-center gap-3 rounded-xl border border-green-300 bg-green-50 px-4 py-3">
+                      <CheckCircle2 className="h-5 w-5 shrink-0 text-green-600" />
+                      <div>
+                        <p className="font-medium text-green-800">Sent successfully!</p>
+                        <p className="text-sm text-green-700">{participants.length} participant{participants.length !== 1 ? 's' : ''} received the welcome email again.</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {sendError && (
+                    <p className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{sendError}</p>
+                  )}
+
+                  {!sendComplete && (
+                    <Button
+                      variant="outline"
+                      onClick={async () => {
+                        setIsSending(true)
+                        setSendError(null)
+                        try {
+                          const res = await fetch(`/api/events/${eventId}/emails`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                              templateId: 'welcome',
+                              subject: editedSubject,
+                              body: editedBody,
+                              recipientIds: participants.map(p => p.id),
+                            }),
+                          })
+                          if (!res.ok) {
+                            const d = await res.json()
+                            throw new Error(d.error ?? 'Failed to send')
+                          }
+                          setSendComplete(true)
+                          await fetchEmailLogs()
+                        } catch (err) {
+                          setSendError(err instanceof Error ? err.message : 'Something went wrong')
+                        } finally {
+                          setIsSending(false)
+                        }
+                      }}
+                      disabled={isSending || participants.length === 0}
+                      className="gap-2"
+                    >
+                      {isSending ? (
+                        <><Loader2 className="h-4 w-4 animate-spin" /> Sending…</>
+                      ) : (
+                        <><Send className="h-4 w-4" /> Send again to all registered ({participants.length})</>
+                      )}
+                    </Button>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
+            {selectedTemplate && selectedTemplate.id !== 'welcome' && (
               <>
                 {/* ---- Section 2: Edit Content ---- */}
                 <Card>
@@ -425,8 +501,8 @@ export default function EmailsPage() {
                   </CardHeader>
                   <CardContent className="space-y-6">
                     <EmailPreview
-                      subject={editedSubject}
-                      body={editedBody}
+                      subject={renderPreview(editedSubject, event, selectedRecipients[0])}
+                      body={renderPreview(editedBody, event, selectedRecipients[0])}
                       recipientCount={selectedRecipients.length}
                       sampleRecipient={selectedRecipients[0]}
                       event={event}
@@ -489,12 +565,6 @@ export default function EmailsPage() {
 
                   return (
                     <div key={template.id}>
-                      {template.id === 'welcome' && (
-                        <p className="mb-1 flex items-center gap-1.5 text-xs font-medium text-blue-600">
-                          <Mail className="h-3 w-3" />
-                          Automatically sent when someone registers
-                        </p>
-                      )}
                     <Card className={cn("overflow-hidden", wasSent && "border-green-300")}>
                       {wasSent && <div className="h-1 bg-green-400" />}
                       {/* Header — always visible */}
@@ -509,6 +579,9 @@ export default function EmailsPage() {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
                             <p className="font-medium text-sm">{template.name}</p>
+                            {template.id === 'welcome' && (
+                              <span className="text-xs text-muted-foreground">(automatically sent on registration)</span>
+                            )}
                             {wasSent && (
                               <span className="flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
                                 <CheckCircle2 className="h-3 w-3" /> Sent

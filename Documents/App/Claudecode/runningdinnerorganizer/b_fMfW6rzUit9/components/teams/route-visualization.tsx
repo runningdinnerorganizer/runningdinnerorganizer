@@ -186,7 +186,7 @@ export function RouteVisualization({ teams, participants, event }: RouteVisualiz
             <p className="font-medium">About Running Dinner Routes</p>
             <p className="mt-1 text-muted-foreground">
               Each participant visits 3 homes during the evening: their own (where they host one course) 
-              and 2 others. By the end of the night, they have met 10 different people across all courses.
+              and 2 others. By the end of the night, they have met 12 different people across all courses.
             </p>
           </div>
         </div>

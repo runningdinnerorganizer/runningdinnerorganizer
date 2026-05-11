@@ -2,7 +2,7 @@
 
 import type { EventFormData } from '@/lib/types'
 import { format } from 'date-fns'
-import { Calendar, MapPin, Clock, Users, CheckCircle2 } from 'lucide-react'
+import { Calendar, MapPin, Clock, CheckCircle2 } from 'lucide-react'
 
 interface StepReviewProps {
   formData: EventFormData
@@ -55,16 +55,6 @@ export function StepReview({ formData }: StepReviewProps) {
           </div>
           
           <div className="flex items-start gap-3 rounded-lg border border-border p-4">
-            <Users className="h-5 w-5 text-primary" />
-            <div>
-              <p className="text-sm font-medium">Max Participants</p>
-              <p className="text-sm text-muted-foreground">
-                {formData.maxParticipants} people ({Math.floor(formData.maxParticipants / 2)} teams)
-              </p>
-            </div>
-          </div>
-          
-          <div className="flex items-start gap-3 rounded-lg border border-border p-4">
             <Calendar className="h-5 w-5 text-primary" />
             <div>
               <p className="text-sm font-medium">Registration Deadline</p>
@@ -85,21 +75,15 @@ export function StepReview({ formData }: StepReviewProps) {
           <div className="space-y-2">
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Appetizer</span>
-              <span>
-                {formatTime(formData.schedule.appetizer.start)} - {formatTime(formData.schedule.appetizer.end)}
-              </span>
+              <span>{formatTime(formData.schedule.appetizer.start)}</span>
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Main Course</span>
-              <span>
-                {formatTime(formData.schedule.main.start)} - {formatTime(formData.schedule.main.end)}
-              </span>
+              <span>{formatTime(formData.schedule.main.start)}</span>
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Dessert</span>
-              <span>
-                {formatTime(formData.schedule.dessert.start)} - {formatTime(formData.schedule.dessert.end)}
-              </span>
+              <span>{formatTime(formData.schedule.dessert.start)}</span>
             </div>
           </div>
         </div>

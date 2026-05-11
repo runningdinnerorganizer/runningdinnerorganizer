@@ -42,7 +42,7 @@ export function StepSchedule({ formData, updateFormData }: StepScheduleProps) {
     <div className="space-y-6">
       <div className="rounded-lg border border-border bg-muted/30 p-4">
         <p className="text-sm text-muted-foreground">
-          Set the start time for each course. Defaults are 19:00, 20:00, and 21:00.
+          Set the start time for each course. Defaults are 18:00, 19:00, and 20:00.
           Allow 15–30 minutes travel time between courses.
         </p>
       </div>
