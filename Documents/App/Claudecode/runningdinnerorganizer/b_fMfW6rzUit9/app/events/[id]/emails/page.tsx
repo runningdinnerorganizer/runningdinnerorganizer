@@ -165,12 +165,32 @@ export default function EmailsPage() {
   const [previewLoggedId, setPreviewLoggedId] = useState<string | null>(null)
 
   // ---------------------------------------------------------------------------
+  // localStorage helpers for persisting customized templates
+  // ---------------------------------------------------------------------------
+  const storageKey = (templateId: string) => `email-template-${eventId}-${templateId}`
+
+  const saveToStorage = (templateId: string, subject: string, body: string) => {
+    try {
+      localStorage.setItem(storageKey(templateId), JSON.stringify({ subject, body }))
+    } catch {}
+  }
+
+  const loadFromStorage = (templateId: string): { subject: string; body: string } | null => {
+    try {
+      const raw = localStorage.getItem(storageKey(templateId))
+      return raw ? JSON.parse(raw) : null
+    } catch { return null }
+  }
+
+  // ---------------------------------------------------------------------------
   // Wizard handlers
   // ---------------------------------------------------------------------------
   const handleSelectTemplate = (template: EmailTemplate) => {
     setSelectedTemplate(template)
-    setEditedSubject(template.subject)
-    setEditedBody(template.body)
+    // Load saved customization if available, otherwise use template defaults
+    const saved = loadFromStorage(template.id)
+    setEditedSubject(saved?.subject ?? template.subject)
+    setEditedBody(saved?.body ?? template.body)
     setSendComplete(false)
     setSendError(null)
     // Auto-pre-select recipients based on template type
@@ -181,6 +201,16 @@ export default function EmailsPage() {
     } else {
       setSelectedRecipients([...participants])
     }
+  }
+
+  const handleSubjectChange = (value: string) => {
+    setEditedSubject(value)
+    if (selectedTemplate) saveToStorage(selectedTemplate.id, value, editedBody)
+  }
+
+  const handleBodyChange = (value: string) => {
+    setEditedBody(value)
+    if (selectedTemplate) saveToStorage(selectedTemplate.id, editedSubject, value)
   }
 
   const handleSend = async () => {
@@ -390,7 +420,24 @@ export default function EmailsPage() {
             </Card>
 
             {selectedTemplate && selectedTemplate.id === 'welcome' && (
-              <Card>
+              <>
+                {/* ---- Customize Content (also for welcome) ---- */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2"><Mail className="h-5 w-5" /> 2. Customize Content</CardTitle>
+                    <CardDescription>Edit the subject and body — placeholders like {'{{firstName}}'} will be replaced automatically</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <TemplateEditor
+                      subject={editedSubject}
+                      body={editedBody}
+                      onSubjectChange={handleSubjectChange}
+                      onBodyChange={handleBodyChange}
+                    />
+                  </CardContent>
+                </Card>
+
+                <Card>
                 <CardContent className="pt-6 space-y-4">
                   <div className="flex items-start gap-3 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3">
                     <Mail className="mt-0.5 h-5 w-5 shrink-0 text-blue-500" />
@@ -454,7 +501,8 @@ export default function EmailsPage() {
                     </Button>
                   )}
                 </CardContent>
-              </Card>
+                </Card>
+              </>
             )}
 
             {selectedTemplate && selectedTemplate.id !== 'welcome' && (
@@ -469,8 +517,8 @@ export default function EmailsPage() {
                     <TemplateEditor
                       subject={editedSubject}
                       body={editedBody}
-                      onSubjectChange={setEditedSubject}
-                      onBodyChange={setEditedBody}
+                      onSubjectChange={handleSubjectChange}
+                      onBodyChange={handleBodyChange}
                     />
                   </CardContent>
                 </Card>
