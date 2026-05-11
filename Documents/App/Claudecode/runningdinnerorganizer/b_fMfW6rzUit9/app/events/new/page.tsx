@@ -218,6 +218,17 @@ export default function NewEventPage() {
               </Card>
             ) : null}
 
+            <div className="mb-6 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-left text-sm text-blue-800">
+              <p className="font-medium">First step recommendation</p>
+              <p className="mt-0.5 text-blue-700">We recommend checking the emails first to see if you like how they are written before sharing the invite link.</p>
+              <button
+                onClick={() => router.push(`/events/${createdEvent.id}/emails`)}
+                className="mt-2 text-blue-600 underline hover:text-blue-800 transition-colors text-xs font-medium"
+              >
+                Go to Emails →
+              </button>
+            </div>
+
             <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
               <Button
                 onClick={() => router.push(`/events/${createdEvent.id}`)}
