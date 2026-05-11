@@ -54,8 +54,7 @@ export function TemplateEditor({ subject, body, onSubjectChange, onBodyChange }:
           value={body}
           onChange={(e) => onBodyChange(e.target.value)}
           placeholder="Enter email content..."
-          rows={12}
-          className="font-mono text-sm"
+          className="font-mono text-sm min-h-[500px] resize-y"
         />
       </div>
       
