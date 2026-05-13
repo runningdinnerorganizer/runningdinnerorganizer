@@ -103,6 +103,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
       partnerName,
       partnerEmail,
       partnerPhone,
+      partnerDietaryRestrictions,
       canHostSolo,
     } = body
 
@@ -140,42 +141,41 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
         partner_name: partnerName ?? null,
         partner_email: partnerEmail ?? null,
         partner_phone: partnerPhone ?? null,
-        can_host_solo: canHostSolo ?? true,
+        // Couples always host together — can_host_solo is not applicable (null)
+        can_host_solo: hasPartner ? null : (canHostSolo ?? true),
       })
       .select()
       .single()
 
     if (insertError) throw insertError
 
-    // If this is a couple registration, immediately create a DB row for the partner too.
-    // This ensures the algorithm always receives one row per person, not one row per registration.
+    // If this is a couple registration, create a DB row for the partner too.
+    // One row per person ensures the team algorithm can reference each member individually.
     if (hasPartner && partnerName && partnerEmail) {
       const nameParts = (partnerName as string).trim().split(/\s+/)
       const partnerFirstName = nameParts[0] || 'Partner'
       const partnerLastName = nameParts.slice(1).join(' ') || ''
 
-      // Only insert if the partner hasn't already registered independently
-      const { data: existingPartner } = await supabase
-        .from('participants')
-        .select('id')
-        .eq('dinner_id', id)
-        .eq('email', partnerEmail)
-        .maybeSingle()
-
-      if (!existingPartner) {
-        await supabase.from('participants').insert({
-          dinner_id: id,
-          first_name: partnerFirstName,
-          last_name: partnerLastName,
-          email: partnerEmail,
-          phone: partnerPhone ?? null,
-          address: address ?? null,
-          lat: lat ?? null,
-          lng: lng ?? null,
-          dietary_restrictions: [],
-          has_partner: false,
-          can_host_solo: canHostSolo ?? true,
-        })
+      const { error: partnerInsertError } = await supabase.from('participants').insert({
+        dinner_id: id,
+        first_name: partnerFirstName,
+        last_name: partnerLastName,
+        email: partnerEmail,
+        phone: partnerPhone ?? null,
+        address: address ?? null,
+        lat: lat ?? null,
+        lng: lng ?? null,
+        dietary_restrictions: partnerDietaryRestrictions ?? [],
+        // Partner is part of a couple — store back-reference to the primary registrant
+        has_partner: true,
+        partner_name: `${firstName} ${lastName}`,
+        partner_email: email,
+        partner_phone: phone ?? null,
+        // Couples host together — not applicable
+        can_host_solo: null,
+      })
+      if (partnerInsertError) {
+        console.error('Partner insert failed:', partnerInsertError)
       }
     }
 
@@ -192,7 +192,8 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
         subject: `🍽️ You're in! Welcome to ${eventTitle}!`,
         text: body,
       })
-    } catch {
+    } catch (emailErr) {
+      console.error('Welcome email failed:', emailErr)
       // Don't fail registration if email fails
     }
 

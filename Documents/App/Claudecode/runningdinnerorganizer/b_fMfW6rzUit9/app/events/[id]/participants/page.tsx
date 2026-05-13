@@ -134,32 +134,7 @@ export default function ParticipantsPage() {
     ? `You're invited to a Running Dinner! Register here: ${inviteLink}`
     : ''
 
-  // Expand partner registrations into two display rows
-  const expandedParticipants = participants.flatMap(p => {
-    const rows = [p]
-    if (p.hasPartner && p.partnerName) {
-      rows.push({
-        id: `${p.id}-partner`,
-        firstName: p.partnerName.split(' ')[0] ?? p.partnerName,
-        lastName: p.partnerName.split(' ').slice(1).join(' ') ?? '',
-        email: p.partnerEmail ?? '—',
-        phone: p.partnerPhone ?? '—',
-        address: p.address,
-        dietaryRestrictions: [],
-        hasPartner: true,
-        partnerName: `${p.firstName} ${p.lastName}`,
-        partnerEmail: p.email,
-        partnerPhone: p.phone,
-        canHostSolo: p.canHostSolo,
-        teamId: p.teamId,
-        registeredAt: p.registeredAt,
-        isPartnerRow: true,
-      } as any)
-    }
-    return rows
-  })
-
-  const filteredParticipants = expandedParticipants.filter(p => {
+  const filteredParticipants = participants.filter(p => {
     const q = searchQuery.toLowerCase()
     return (
       `${p.firstName} ${p.lastName}`.toLowerCase().includes(q) ||
@@ -216,7 +191,7 @@ export default function ParticipantsPage() {
           <div>
             <h1 className="text-3xl font-bold text-amber-900">Participants</h1>
             <p className="text-amber-600">
-              {expandedParticipants.length} participants ({participants.length} registration{participants.length !== 1 ? 's' : ''}) for {event?.publicTitle || event?.title}
+              {participants.length} participant{participants.length !== 1 ? 's' : ''} for {event?.publicTitle || event?.title}
             </p>
           </div>
         </div>
@@ -286,7 +261,7 @@ export default function ParticipantsPage() {
               <thead>
                 <tr className="border-b border-amber-100 bg-amber-50/60 text-left">
                   <th className="px-4 py-3 font-semibold text-amber-900">Name</th>
-                  <th className="hidden px-4 py-3 font-semibold text-amber-900 md:table-cell">Email</th>
+                  <th className="px-4 py-3 font-semibold text-amber-900">Email</th>
                   <th className="hidden px-4 py-3 font-semibold text-amber-900 lg:table-cell">Phone</th>
                   <th className="hidden px-4 py-3 font-semibold text-amber-900 xl:table-cell">Address</th>
                   <th className="px-4 py-3 font-semibold text-amber-900">Dietary</th>
@@ -297,16 +272,16 @@ export default function ParticipantsPage() {
               </thead>
               <tbody className="divide-y divide-amber-50">
                 {filteredParticipants.map((p) => (
-                  <tr key={p.id} className={`transition-colors hover:bg-amber-50/40 ${(p as any).isPartnerRow ? 'bg-amber-50/30' : ''}`}>
+                  <tr key={p.id} className="transition-colors hover:bg-amber-50/40">
                     <td className="px-4 py-3 font-medium text-amber-900">
                       <div className="flex items-center gap-2">
                         {p.firstName} {p.lastName}
-                        {(p as any).isPartnerRow && (
-                          <Badge className="border border-amber-300 bg-amber-100 text-xs text-amber-700">Partner</Badge>
+                        {p.hasPartner && (
+                          <Badge className="border border-amber-300 bg-amber-100 text-xs text-amber-700">Couple</Badge>
                         )}
                       </div>
                     </td>
-                    <td className="hidden px-4 py-3 text-amber-700 md:table-cell">{p.email}</td>
+                    <td className="px-4 py-3 text-amber-700">{p.email}</td>
                     <td className="hidden px-4 py-3 text-amber-700 lg:table-cell">{p.phone}</td>
                     <td className="hidden max-w-[180px] truncate px-4 py-3 text-amber-700 xl:table-cell">{p.address}</td>
                     <td className="px-4 py-3">
@@ -338,16 +313,14 @@ export default function ParticipantsPage() {
                       {format(new Date(p.registeredAt), 'MMM d, yyyy')}
                     </td>
                     <td className="px-4 py-3">
-                      {!(p as any).isPartnerRow && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => setDeleteId(p.id)}
-                          className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      )}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setDeleteId(p.id)}
+                        className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     </td>
                   </tr>
                 ))}
@@ -364,7 +337,7 @@ export default function ParticipantsPage() {
         {/* Total count */}
         {participants.length > 0 && (
           <p className="mt-4 text-right text-sm text-amber-600">
-            Showing {filteredParticipants.length} of {participants.length} participants
+            Showing {filteredParticipants.length} of {participants.length} participant{participants.length !== 1 ? 's' : ''}
           </p>
         )}
       </main>

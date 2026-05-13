@@ -51,6 +51,7 @@ interface FormState {
   partnerName: string
   partnerEmail: string
   partnerPhone: string
+  partnerDietaryRestrictions: string[]
   canHostSolo: boolean | null
 }
 
@@ -90,6 +91,7 @@ export default function JoinPage() {
     partnerName: '',
     partnerEmail: '',
     partnerPhone: '',
+    partnerDietaryRestrictions: [],
     canHostSolo: null,
   })
 
@@ -120,6 +122,15 @@ export default function JoinPage() {
       dietaryRestrictions: prev.dietaryRestrictions.includes(value)
         ? prev.dietaryRestrictions.filter(d => d !== value)
         : [...prev.dietaryRestrictions, value],
+    }))
+  }
+
+  const togglePartnerDietary = (value: string) => {
+    setForm(prev => ({
+      ...prev,
+      partnerDietaryRestrictions: prev.partnerDietaryRestrictions.includes(value)
+        ? prev.partnerDietaryRestrictions.filter(d => d !== value)
+        : [...prev.partnerDietaryRestrictions, value],
     }))
   }
 
@@ -170,6 +181,7 @@ export default function JoinPage() {
         partnerName: form.hasPartner ? form.partnerName : null,
         partnerEmail: form.hasPartner ? form.partnerEmail : null,
         partnerPhone: form.hasPartner ? form.partnerPhone : null,
+        partnerDietaryRestrictions: form.hasPartner ? form.partnerDietaryRestrictions : null,
         canHostSolo: form.hasPartner ? null : form.canHostSolo,
       }
       const res = await fetch(`/api/events/${dinner.id}/participants`, {
@@ -386,6 +398,21 @@ export default function JoinPage() {
                       <div className="space-y-2">
                         <Label htmlFor="partnerPhone">Partner Phone</Label>
                         <Input id="partnerPhone" type="tel" placeholder="+1 555 987 6543" value={form.partnerPhone} onChange={(e) => update({ partnerPhone: e.target.value })} className="rounded-xl border-amber-200" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Partner Dietary Restrictions</Label>
+                        <div className="grid grid-cols-2 gap-2">
+                          {dietaryOptions.map((option) => (
+                            <div key={`partner-${option.value}`} className="flex items-center gap-2">
+                              <Checkbox
+                                id={`partner-${option.value}`}
+                                checked={form.partnerDietaryRestrictions.includes(option.value)}
+                                onCheckedChange={() => togglePartnerDietary(option.value)}
+                              />
+                              <label htmlFor={`partner-${option.value}`} className="cursor-pointer text-sm font-medium text-amber-900">{option.label}</label>
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     </div>
                   )}
